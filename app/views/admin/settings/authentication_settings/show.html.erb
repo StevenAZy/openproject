@@ -55,6 +55,9 @@ See COPYRIGHT and LICENSE files for more details.
       partial: "admin/settings/authentication_settings/passwords"
     }
   ]
+  if EnterpriseToken.hide_banners?
+    tabs.reject! { |tab| tab[:enterprise_feature] && !EnterpriseToken.allows_to?(tab[:enterprise_feature]) }
+  end
 %>
 
 <%=

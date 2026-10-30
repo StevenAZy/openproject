@@ -83,8 +83,8 @@ module Projects
 
     def allowed_new_workspace_types
       @allowed_new_workspace_types ||= [].tap do |types|
-        types << "portfolio" if @current_user.allowed_globally?(:add_portfolios)
-        types << "program" if @current_user.allowed_globally?(:add_programs)
+        types << "portfolio" if @current_user.allowed_globally?(:add_portfolios) && show_workspace_type?("portfolio")
+        types << "program" if @current_user.allowed_globally?(:add_programs) && show_workspace_type?("program")
         types << "project" if @current_user.allowed_globally?(:add_project)
       end
     end
@@ -105,6 +105,10 @@ module Projects
       return EnterpriseToken.allows_to?(:portfolio_management) if workspace_type.in?(%w[portfolio program])
 
       true
+    end
+
+    def show_workspace_type?(workspace_type)
+      workspace_type_enterprise_feature_allowed?(workspace_type) || !EnterpriseToken.hide_banners?
     end
 
     def filters_expanded?

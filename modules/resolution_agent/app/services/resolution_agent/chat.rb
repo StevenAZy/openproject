@@ -84,7 +84,7 @@ module ResolutionAgent
       context = Context.new(@work_package, user: @user, vision: false)
       code = read_repository(context)
       if code.is_a?(Hash) && !code[:ok]
-        conversation.messages.create!(role: "agent", body: "代码修复没有完成: #{code[:error]}")
+        conversation.messages.create!(role: "agent", body: I18n.t("resolution_agent.prompt.code_failed", error: code[:error]))
         conversation.runs.create!(
           outcome: "gitea_failed",
           gitea_repository: @gitea_url,
@@ -115,23 +115,20 @@ module ResolutionAgent
         setting: @setting,
         repository_url: @gitea_url,
         branch: @branch,
-        prompt: "#{context.prompt}\n\n用户:\n#{@body}"
+        prompt: "#{context.prompt}\n\n#{I18n.t('resolution_agent.prompt.user')}:\n#{@body}"
       ).call
     end
 
     def ask(context, code_text: nil)
-      prompt = <<~PROMPT
-        你是工作包代理。只根据下面这一条工作包的材料回答，不要使用其他工作包的描述、评论或附件。
-        材料里没有的事实写「未提供」。没有日志正文时，日志解读写「无日志附件」。
-        不要编造日志、报错或代码。
-        #{code_instruction}
-        #{code_section(code_text)}
-        材料:
-        #{context.prompt}
-
-        用户:
-        #{@body}
-      PROMPT
+      prompt = I18n.t(
+        "resolution_agent.prompt.instructions",
+        missing: I18n.t("resolution_agent.summary.missing"),
+        no_log: I18n.t("resolution_agent.summary.no_log"),
+        code_instruction:,
+        code_section: code_section(code_text),
+        materials: context.prompt,
+        message: @body
+      )
       chat = @setting.llm_chat
       chat = chat.with_schema(SCHEMA) if chat.respond_to?(:with_schema)
       message = context.image_paths.any? ? chat.ask(prompt, with: context.image_paths) : chat.ask(prompt)
@@ -149,15 +146,15 @@ module ResolutionAgent
 
     def code_section(code_text)
       return "" if code_text.nil?
-      return "仓库分支上没有读到相关代码。file_changes 必须是空数组，不要编造代码。" if code_text.blank?
+      return I18n.t("resolution_agent.prompt.no_code") if code_text.blank?
 
-      "已读取的仓库文件:\n#{code_text}"
+      I18n.t("resolution_agent.prompt.files_read", text: code_text)
     end
 
     def code_instruction
-      return "这次没有给出 Gitea 仓库，file_changes 必须是空数组。" if @gitea_url.blank? || @branch.blank?
+      return I18n.t("resolution_agent.prompt.no_repository") if @gitea_url.blank? || @branch.blank?
 
-      "用户给出了仓库 #{@gitea_url} 和分支 #{@branch}。file_changes 只包含需要修改的文件完整内容，路径相对仓库根目录。不要修改未给出的仓库。"
+      I18n.t("resolution_agent.prompt.repository_given", url: @gitea_url, branch: @branch)
     end
 
     def apply_code_fix(conversation, fields)
@@ -174,9 +171,9 @@ module ResolutionAgent
       if result[:ok]
         fields[:direction] = [
           fields[:direction],
-          "仓库: #{result[:repository]}",
-          "修复分支: #{result[:fix_branch]}",
-          "Pull Request: #{result[:pull_request_url]}"
+          I18n.t("resolution_agent.prompt.repository", repository: result[:repository]),
+          I18n.t("resolution_agent.prompt.fix_branch", branch: result[:fix_branch]),
+          I18n.t("resolution_agent.prompt.pull_request", url: result[:pull_request_url])
         ].compact.join("\n")
         conversation.runs.create!(
           outcome: "gitea_attempt",
@@ -187,7 +184,7 @@ module ResolutionAgent
           assignee_before_fix_id: assignee_before
         )
       else
-        fields[:direction] = [fields[:direction], "代码修复没有完成: #{result[:error]}"].compact.join("\n")
+        fields[:direction] = [fields[:direction], I18n.t("resolution_agent.prompt.code_failed", error: result[:error])].compact.join("\n")
         conversation.runs.create!(
           outcome: "gitea_failed",
           gitea_repository: @gitea_url,

@@ -1,3 +1,4 @@
+@if (showShareButton) {
 <button
   class="button toolbar-icon"
   data-test-selector="op-wp-share-button"
@@ -16,12 +17,5 @@
     </span>
   }
 
-  @if (showEnterpriseIcon) {
-    <svg
-      op-enterprise-addons-icon
-      class="button--icon upsell-colored"
-      size="small"
-    ></svg>
-  }
-
 </button>
+}

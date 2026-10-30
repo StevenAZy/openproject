@@ -68,6 +68,7 @@ module Meetings
     def templates_menu_item
       return unless User.current.logged?
       return unless can_create_meetings?
+      return if EnterpriseToken.hide_banners? && !EnterpriseToken.allows_to?(:meeting_templates)
 
       templates_href = if project
                          templates_project_meetings_path(project)

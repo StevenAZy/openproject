@@ -165,10 +165,18 @@ module ::WorkPackages
         when :assigned_to_me
           assigned_to_me_query
         when :shared_with_users
+          return if hide_sharing_queries?
+
           shared_with_users_query
         when :shared_with_me
+          return if hide_sharing_queries?
+
           shared_with_me_query
         end
+      end
+
+      def hide_sharing_queries?
+        EnterpriseToken.hide_banners? && !EnterpriseToken.allows_to?(:work_package_sharing)
       end
 
       def show_enterprise_icon?(query_key)

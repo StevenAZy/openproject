@@ -59,7 +59,7 @@ export class WorkPackageShareButtonComponent extends UntilDestroyedMixin impleme
 
   @Input() public workPackage:WorkPackageResource;
 
-  showEnterpriseIcon = !this.bannersService.allowsTo('work_package_sharing');
+  showShareButton = this.bannersService.allowsTo('work_package_sharing');
 
   shareCount$:Observable<number>;
 

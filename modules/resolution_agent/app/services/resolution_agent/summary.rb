@@ -14,25 +14,19 @@ module ResolutionAgent
     end
 
     def to_s
-      lines = [
-        section("当前结论", :conclusion),
-        section("环境", :environment),
-        section("问题", :problem),
-        section("已做尝试", :attempts),
-        section("日志解读", :log_reading),
-        section("代理给出的方向", :direction)
-      ]
-      lines << "原始记录\n#{@original}" if @original
+      lines = SECTIONS.map { |key| section(key) }
+      lines << "#{I18n.t("resolution_agent.summary.original")}\n#{@original}" if @original
       lines.join("\n\n")
     end
 
     private
 
-    def section(title, key)
+    def section(key)
       value = @fields[key].to_s.strip
-      value = "未提供" if value.blank?
-      value = "无日志附件" if key == :log_reading && value == "未提供"
-      "#{title}\n#{value}"
+      missing = I18n.t("resolution_agent.summary.missing")
+      value = missing if value.blank?
+      value = I18n.t("resolution_agent.summary.no_log") if key == :log_reading && value == missing
+      "#{I18n.t("resolution_agent.summary.#{key}")}\n#{value}"
     end
   end
 end

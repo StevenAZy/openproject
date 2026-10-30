@@ -53,6 +53,7 @@
           ) do |sub_menu|
             OpenProject::CustomFieldFormat.enabled_for_class_name("User")
                                           .sort_by(&:name)
+                                          .reject { |format| EnterpriseToken.hide_banners? && !format.enterprise_feature_allowed? }
                                           .map do |format|
               sub_menu.with_item(
                 label: helpers.label_for_custom_field_format(format.name),

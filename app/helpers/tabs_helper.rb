@@ -43,9 +43,10 @@ module TabsHelper
 
     header.with_tab_nav(label: nil, test_selector:) do |tab_nav|
       tabs.each do |tab|
-        tab_nav.with_tab(selected: selected_tab(tabs) == tab, href: tab[:path], data: tab[:data]) do |t|
-          feature = tab[:enterprise_feature]
+        feature = tab[:enterprise_feature]
+        next if feature && !EnterpriseToken.allows_to?(feature) && EnterpriseToken.hide_banners?
 
+        tab_nav.with_tab(selected: selected_tab(tabs) == tab, href: tab[:path], data: tab[:data]) do |t|
           if feature && !EnterpriseToken.allows_to?(feature)
             t.with_icon(icon: :"op-enterprise-addons", classes: "upsell-colored")
           end

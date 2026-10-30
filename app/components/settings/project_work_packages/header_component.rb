@@ -88,13 +88,15 @@ module Settings
           }
         end
 
-        tabs << {
-          name: "internal_comments",
-          path: project_settings_work_packages_internal_comments_path,
-          label: internal_comments_title,
-          # The nav label may carry an upsell icon; the browser title needs plain text.
-          title_label: internal_comments_translation
-        }
+        if EnterpriseToken.allows_to?(:internal_comments) || !EnterpriseToken.hide_banners?
+          tabs << {
+            name: "internal_comments",
+            path: project_settings_work_packages_internal_comments_path,
+            label: internal_comments_title,
+            # The nav label may carry an upsell icon; the browser title needs plain text.
+            title_label: internal_comments_translation
+          }
+        end
 
         tabs
       end

@@ -64,7 +64,8 @@ module Notifications
     end
 
     def reason_filters
-      %w[mentioned assigned responsible watched dateAlert reminder shared].map do |reason|
+      %w[mentioned assigned responsible watched dateAlert reminder shared].filter_map do |reason|
+        next if reason == "shared" && EnterpriseToken.hide_banners? && !EnterpriseToken.allows_to?(:work_package_sharing)
         count = unread_by_reason[reason]
         menu_item(title: I18n.t("notifications.reasons.#{reason}"),
                   icon_key: reason,

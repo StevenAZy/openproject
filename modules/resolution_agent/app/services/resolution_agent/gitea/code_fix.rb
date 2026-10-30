@@ -15,9 +15,9 @@ module ResolutionAgent
 
       def call
         repository = Repository.parse(@repository_url, @setting.gitea_base_url)
-        return failure("仓库不属于已配置的 Gitea 站点") unless repository
-        return failure("没有可提交的代码修改") if @changes.empty?
-        return failure("Gitea 令牌未配置") if @setting.gitea_token.blank?
+        return failure(I18n.t("resolution_agent.gitea.wrong_site")) unless repository
+        return failure(I18n.t("resolution_agent.gitea.no_changes")) if @changes.empty?
+        return failure(I18n.t("resolution_agent.gitea.missing_token")) if @setting.gitea_token.blank?
 
         client = Client.new(repository, token: @setting.gitea_token)
         fix_branch = "agent/#{@work_package.id}"
@@ -31,7 +31,7 @@ module ResolutionAgent
           client.write_file(path, fix_branch, content.to_s, "Fix work package ##{@work_package.id}")
           written = true
         end
-        return failure("没有可提交的代码修改") unless written
+        return failure(I18n.t("resolution_agent.gitea.no_changes")) unless written
         url = client.pull_request(
           head: fix_branch,
           base: @branch,

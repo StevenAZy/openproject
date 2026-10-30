@@ -97,7 +97,7 @@ module Redmine::MenuManager::TopMenu::HelpMenu
     menu.with_group do |menu_group|
       menu_group.with_heading(title: I18n.t("top_menu.help_and_support"))
 
-      unless EnterpriseToken.hide_banners? && EnterpriseToken.active?
+      unless EnterpriseToken.hide_banners?
         menu_group.with_item(
           **link_options_for(:upsell,
                              url_params: {
@@ -118,9 +118,11 @@ module Redmine::MenuManager::TopMenu::HelpMenu
                            test_selector: "op-menu--item-action")
       menu_group.with_item(**link_options_for(:shortcuts))
       menu_group.with_item(**link_options_for(:forums))
-      menu_group.with_item(**link_options_for(
-        EnterpriseToken.active? ? :enterprise_support : :enterprise_support_as_community
-      ))
+      unless EnterpriseToken.hide_banners? && !EnterpriseToken.active?
+        menu_group.with_item(**link_options_for(
+          EnterpriseToken.active? ? :enterprise_support : :enterprise_support_as_community
+        ))
+      end
     end
   end
 

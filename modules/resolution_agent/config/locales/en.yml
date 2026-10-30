@@ -47,3 +47,74 @@ en:
       related_without_assignee: "The related work packages have no assignee, so the assignee was not changed."
       close_without_test: "The work package stays open until a passed field test is recorded."
       workflow: "The workflow does not allow this change, so the description, comment, assignee, and status were left unchanged. %{reason}"
+    conclusions:
+      pe_resolved: "Resolved on site"
+      pe_unresolved: "Not resolved, handed to R&D"
+      fix_succeeded: "Code fixed, waiting for acceptance"
+      fix_failed: "The code fix did not succeed"
+      test_passed: "Test passed"
+      test_failed: "Test failed"
+      supervisor_close: "Test passed"
+    summary:
+      conclusion: "Current conclusion"
+      environment: "Environment"
+      problem: "Problem"
+      attempts: "Attempts"
+      log_reading: "Log reading"
+      direction: "Direction from the agent"
+      original: "Original record"
+      missing: "Not provided"
+      no_log: "No log attachment"
+    prompt:
+      instructions: |
+        You are the work package agent. Answer only from the materials for this one work package. Do not use descriptions, comments, or attachments from other work packages.
+        Write "%{missing}" for facts that are not in the materials. When there is no log body, write "%{no_log}" for the log reading.
+        Do not invent logs, errors, or code.
+        %{code_instruction}
+        %{code_section}
+        Materials:
+        %{materials}
+
+        User:
+        %{message}
+      no_repository: "No Gitea repository was given. file_changes must be an empty array."
+      repository_given: "The user gave repository %{url} and branch %{branch}. file_changes contains only the full contents of files that need to change, with paths relative to the repository root. Do not change any other repository."
+      no_code: "No relevant code was read from the branch. file_changes must be an empty array. Do not invent code."
+      files_read: "Files read from the repository:\n%{text}"
+      code_failed: "The code fix was not completed: %{error}"
+      repository: "Repository: %{repository}"
+      fix_branch: "Fix branch: %{branch}"
+      pull_request: "Pull Request: %{url}"
+      user: "User"
+      choose_paths: |
+        These are the file paths on branch %{branch}. Choose at most %{limit} paths that are most relevant to the materials. Do not invent paths that are not in the list.
+        Materials:
+        %{materials}
+        Paths:
+        %{paths}
+      file: "File %{path}"
+    context:
+      work_package: "Work package #%{id}"
+      subject: "Subject: %{subject}"
+      status: "Status: %{status}"
+      type: "Type: %{type}"
+      priority: "Priority: %{priority}"
+      assignee: "Assignee: %{name}"
+      description: "Description:"
+      comments_missing: "Comments: %{missing}"
+      comments: "Recent comments:"
+      custom_fields_missing: "Long text fields: %{missing}"
+      attachments_missing: "Attachments: %{no_log}"
+      file_links_missing: "External files: %{missing}"
+      file_link: "Filename: %{name} Storage: %{storage} Path: %{missing}"
+      file_links: "External file metadata (no file body, do not put this in the log reading):"
+      filename_only: "filename only"
+      no_text_layer: "no text layer"
+      unreadable: "unreadable"
+      attachment: "Attachment %{name} %{meta}"
+      meta: "Size: %{size} Type: %{type} Uploader: %{uploader} Time: %{time}"
+      truncated: "[truncated]"
+    gitea:
+      wrong_site: "The repository is not on the configured Gitea site"
+      missing_token: "The Gitea token is not configured"
+      no_changes: "There are no code changes to commit"

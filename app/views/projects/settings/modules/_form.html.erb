@@ -28,11 +28,17 @@ See COPYRIGHT and LICENSE files for more details.
 
 <% sorted_modules = OpenProject::AccessControl.available_project_modules(sorted: true) %>
 <% sorted_modules.each do |name| %>
+  <% feature = OpenProject::AccessControl.module_enterprise_feature?(name) %>
+  <% if feature && !EnterpriseToken.allows_to?(feature) && EnterpriseToken.hide_banners? %>
+    <% if @project.module_enabled?(name) %>
+      <%= hidden_field_tag "project[enabled_module_names][]", name %>
+    <% end %>
+    <% next %>
+  <% end %>
 
   <div class="form--field">
     <label class="form--label" for="project_enabled_module_names_<%= name %>">
       <%= l_or_humanize(name, prefix: "project_module_") %>
-      <% feature = OpenProject::AccessControl.module_enterprise_feature?(name) %>
       <% if feature && !EnterpriseToken.allows_to?(feature) %>
         <%= render Primer::Beta::Octicon.new(
               icon: :"op-enterprise-addons",

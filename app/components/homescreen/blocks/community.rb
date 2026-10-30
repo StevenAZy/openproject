@@ -43,7 +43,11 @@ module Homescreen
           { path: :user_guides },
           { path: :shortcuts },
           { path: :forums },
-          { path: EnterpriseToken.active? ? :enterprise_support : :enterprise_support_as_community },
+          *(if EnterpriseToken.hide_banners? && !EnterpriseToken.active?
+              []
+            else
+              [{ path: EnterpriseToken.active? ? :enterprise_support : :enterprise_support_as_community }]
+            end),
           { path: :website,
             label: I18n.t("label_openproject_website"),
             url_params: { utm_source: "unknown", utm_medium: "op-instance", utm_campaign: "website-home-screen" } },

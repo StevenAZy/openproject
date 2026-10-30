@@ -135,6 +135,14 @@ export class OpBaselineComponent extends UntilDestroyedMixin implements OnInit {
     },
   };
 
+  public get visibleBaselineValues() {
+    if (this.available || this.Banner.showBannerFor('baseline_comparison')) {
+      return this.baselineAvailableValues;
+    }
+
+    return this.baselineAvailableValues.filter((value) => value.value === 'oneDayAgo');
+  }
+
   public baselineAvailableValues = [
     {
       value: 'oneDayAgo',

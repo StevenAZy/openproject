@@ -33,6 +33,7 @@
     <% if top_level_sidebar_menu_items.any? %>
       <ul class="op-submenu--items">
         <% top_level_sidebar_menu_items.first.children.each do |menu_item| %>
+          <% next if menu_item.show_enterprise_icon && EnterpriseToken.hide_banners? %>
           <li class="op-submenu--item" data-filter--filter-list-target="searchItem">
             <% selected = menu_item.selected ? "selected" : "" %>
             <a class="op-submenu--item-action <%= selected %>" href="<%= menu_item.href %>" data-test-selector="op-submenu--item-action">
@@ -77,6 +78,7 @@
         <ul class="op-submenu--items"
             data-menus--submenu-target="container">
           <% menu_item.children.each do |child_item| %>
+            <% next if child_item.show_enterprise_icon && EnterpriseToken.hide_banners? %>
             <li class="op-submenu--item" data-filter--filter-list-target="searchItem">
               <% selected = child_item.selected ? "selected" : "" %>
               <a class="op-submenu--item-action <%= selected %>" href="<%= child_item.href %>" data-test-selector="op-submenu--item-action">

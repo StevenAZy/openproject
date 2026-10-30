@@ -47,3 +47,74 @@ zh-CN:
       related_without_assignee: "关联工作包没有负责人，负责人没有被修改。"
       close_without_test: "还没有记录测试通过，工作包不会关闭。"
       workflow: "工作流不允许这次变更，描述、评论、负责人和状态都保持原样。%{reason}"
+    conclusions:
+      pe_resolved: "已在现场解决"
+      pe_unresolved: "未解决并转交 R&D"
+      fix_succeeded: "代码已修复待验收"
+      fix_failed: "代码修复没有成功"
+      test_passed: "测试通过"
+      test_failed: "测试未通过"
+      supervisor_close: "测试通过"
+    summary:
+      conclusion: "当前结论"
+      environment: "环境"
+      problem: "问题"
+      attempts: "已做尝试"
+      log_reading: "日志解读"
+      direction: "代理给出的方向"
+      original: "原始记录"
+      missing: "未提供"
+      no_log: "无日志附件"
+    prompt:
+      instructions: |
+        你是工作包代理。只根据下面这一条工作包的材料回答，不要使用其他工作包的描述、评论或附件。
+        材料里没有的事实写「%{missing}」。没有日志正文时，日志解读写「%{no_log}」。
+        不要编造日志、报错或代码。
+        %{code_instruction}
+        %{code_section}
+        材料:
+        %{materials}
+
+        用户:
+        %{message}
+      no_repository: "这次没有给出 Gitea 仓库，file_changes 必须是空数组。"
+      repository_given: "用户给出了仓库 %{url} 和分支 %{branch}。file_changes 只包含需要修改的文件完整内容，路径相对仓库根目录。不要修改未给出的仓库。"
+      no_code: "仓库分支上没有读到相关代码。file_changes 必须是空数组，不要编造代码。"
+      files_read: "已读取的仓库文件:\n%{text}"
+      code_failed: "代码修复没有完成: %{error}"
+      repository: "仓库: %{repository}"
+      fix_branch: "修复分支: %{branch}"
+      pull_request: "Pull Request: %{url}"
+      user: "用户"
+      choose_paths: |
+        下面是仓库分支 %{branch} 的文件路径。选出和这段材料最相关的最多 %{limit} 个文件路径，不要编造列表里没有的路径。
+        材料:
+        %{materials}
+        路径:
+        %{paths}
+      file: "文件 %{path}"
+    context:
+      work_package: "工作包 #%{id}"
+      subject: "标题: %{subject}"
+      status: "状态: %{status}"
+      type: "类型: %{type}"
+      priority: "优先级: %{priority}"
+      assignee: "负责人: %{name}"
+      description: "描述:"
+      comments_missing: "评论: %{missing}"
+      comments: "最近评论:"
+      custom_fields_missing: "长文本字段: %{missing}"
+      attachments_missing: "附件: %{no_log}"
+      file_links_missing: "外部文件: %{missing}"
+      file_link: "文件名: %{name} 存储: %{storage} 路径: %{missing}"
+      file_links: "外部文件元数据（没有正文，不要写入日志解读）:"
+      filename_only: "仅列出文件名"
+      no_text_layer: "无文本层"
+      unreadable: "无法读取"
+      attachment: "附件 %{name} %{meta}"
+      meta: "大小: %{size} 类型: %{type} 上传者: %{uploader} 时间: %{time}"
+      truncated: "[已截断]"
+    gitea:
+      wrong_site: "仓库不属于已配置的 Gitea 站点"
+      missing_token: "Gitea 令牌未配置"
+      no_changes: "没有可提交的代码修改"

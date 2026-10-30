@@ -12,19 +12,14 @@ module ResolutionAgent
       "supervisor_close" => %w[确认完成]
     }.freeze
 
-    CONCLUSIONS = {
-      "pe_resolved" => "已在现场解决",
-      "pe_unresolved" => "未解决并转交 R&D",
-      "fix_succeeded" => "代码已修复待验收",
-      "fix_failed" => "代码修复没有成功",
-      "test_passed" => "测试通过",
-      "test_failed" => "测试未通过",
-      "supervisor_close" => "测试通过"
-    }.freeze
-
     def self.phrase(text)
       stripped = text.to_s.strip
       PHRASES.each { |action, phrases| return action if phrases.include?(stripped) }
+      %i[en zh-CN].each do |locale|
+        I18n.t("resolution_agent.actions", locale:).each do |action, label|
+          return action.to_s if label.to_s == stripped
+        end
+      end
       nil
     end
 
@@ -76,7 +71,7 @@ module ResolutionAgent
         url = latest_pull_request(conversation)
         fields[:direction] = [fields[:direction], url].compact.join("\n") if url.present?
       end
-      fields.merge(conclusion: CONCLUSIONS.fetch(@action))
+      fields.merge(conclusion: I18n.t("resolution_agent.conclusions.#{@action}"))
     end
 
     def summary_for(fields)

@@ -350,6 +350,10 @@ module Redmine::MenuManager::MenuHelper
       return false
     end
 
+    if EnterpriseToken.hide_banners? && node.enterprise_feature_missing?
+      return false
+    end
+
     if project
       allowed_project_node?(node, project, user)
     else

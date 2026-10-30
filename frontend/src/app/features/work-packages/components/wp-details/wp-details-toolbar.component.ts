@@ -35,6 +35,7 @@ import {
   HalResourceEditingService,
 } from 'core-app/shared/components/fields/edit/services/hal-resource-editing.service';
 import { Observable, of } from 'rxjs';
+import { BannersService } from 'core-app/core/enterprise/banners.service';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -48,6 +49,7 @@ export class WorkPackageSplitViewToolbarComponent implements OnInit {
   readonly halEditing = inject(HalResourceEditingService);
   readonly configurationService = inject(ConfigurationService);
   readonly currentUserService = inject(CurrentUserService);
+  readonly banners = inject(BannersService);
 
   @Input() workPackage:WorkPackageResource;
 
@@ -61,7 +63,9 @@ export class WorkPackageSplitViewToolbarComponent implements OnInit {
   };
 
   ngOnInit() {
-    this.displayShareButton$ = this.currentUserService.hasCapabilities$('work_package_shares/index', this.workPackage.project.id);
+    this.displayShareButton$ = this.banners.allowsTo('work_package_sharing')
+      ? this.currentUserService.hasCapabilities$('work_package_shares/index', this.workPackage.project.id)
+      : of(false);
     this.displayReminderButton$ = this.currentUserService.isLoggedInAndHasCapabalities$(
       'work_packages/read',
       (this.workPackage.project as ProjectResource).id,

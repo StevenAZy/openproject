@@ -37,6 +37,7 @@ import { WpSingleViewService } from 'core-app/features/work-packages/routing/wp-
 import { WorkPackageSingleViewBase } from 'core-app/features/work-packages/routing/wp-view-base/work-package-single-view.base';
 import { WorkPackageNotificationService } from 'core-app/features/work-packages/services/notifications/work-package-notification.service';
 import { Observable, of } from 'rxjs';
+import { BannersService } from 'core-app/core/enterprise/banners.service';
 
 @Component({
   templateUrl: './wp-full-view.html',
@@ -54,6 +55,7 @@ export class WorkPackagesFullViewComponent extends WorkPackageSingleViewBase imp
   recentItemsService = inject(RecentItemsService);
   readonly currentUserService = inject(CurrentUserService);
   readonly cdRef = inject(ChangeDetectorRef);
+  readonly banners = inject(BannersService);
 
   // Watcher properties
   public isWatched:boolean;
@@ -108,7 +110,9 @@ export class WorkPackagesFullViewComponent extends WorkPackageSingleViewBase imp
     this.isWatched = Object.prototype.hasOwnProperty.call(wp, 'unwatch');
     this.displayWatchButton = Object.prototype.hasOwnProperty.call(wp, 'unwatch') || Object.prototype.hasOwnProperty.call(wp, 'watch');
     this.displayTimerButton = Object.prototype.hasOwnProperty.call(wp, 'logTime');
-    this.displayShareButton$ = this.currentUserService.hasCapabilities$('work_package_shares/index', (wp.project as ProjectResource).id);
+    this.displayShareButton$ = this.banners.allowsTo('work_package_sharing')
+      ? this.currentUserService.hasCapabilities$('work_package_shares/index', (wp.project as ProjectResource).id)
+      : of(false);
     this.displayReminderButton$ = this.currentUserService.isLoggedInAndHasCapabalities$(
       'work_packages/read',
       (this.workPackage.project as ProjectResource).id,

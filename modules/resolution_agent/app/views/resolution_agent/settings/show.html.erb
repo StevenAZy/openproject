@@ -1,0 +1,50 @@
+<% html_title t(:label_administration), t("resolution_agent.menu") %>
+
+<%=
+  render(Primer::OpenProject::PageHeader.new) do |header|
+    header.with_title { t("resolution_agent.menu") }
+    header.with_description { t("resolution_agent.settings_hint") }
+    header.with_breadcrumbs(
+      [{ href: admin_index_path, text: t(:label_administration) },
+       t("resolution_agent.menu")]
+    )
+  end
+%>
+
+<%= form_with model: @setting, url: resolution_agent_settings_path, method: :patch do |form| %>
+  <p>
+    <%= form.check_box :enabled %>
+    <%= form.label :enabled, t("resolution_agent.settings.enabled") %>
+  </p>
+  <p>
+    <%= form.label :service_account_id, t("resolution_agent.settings.service_account") %>
+    <%= form.collection_select :service_account_id, @users, :id, :name, include_blank: true %>
+  </p>
+  <p>
+    <%= form.label :rd_supervisor_id, t("resolution_agent.settings.supervisor") %>
+    <%= form.collection_select :rd_supervisor_id, @users, :id, :name, include_blank: true %>
+  </p>
+  <h4><%= t("resolution_agent.settings.llm") %></h4>
+  <p><%= t("resolution_agent.settings.llm_hint") %></p>
+  <p>
+    <%= form.label :llm_base_url, t("resolution_agent.settings.llm_base_url") %>
+    <%= form.url_field :llm_base_url, placeholder: "http://127.0.0.1:8000/v1" %>
+  </p>
+  <p>
+    <%= form.label :llm_model, t("resolution_agent.settings.llm_model") %>
+    <%= form.text_field :llm_model %>
+  </p>
+  <p>
+    <%= form.label :llm_api_key, t("resolution_agent.settings.llm_api_key") %>
+    <%= form.password_field :llm_api_key, value: nil, autocomplete: "new-password" %>
+  </p>
+  <p>
+    <%= form.label :gitea_base_url, t("resolution_agent.settings.gitea_base_url") %>
+    <%= form.url_field :gitea_base_url %>
+  </p>
+  <p>
+    <%= form.label :gitea_token, t("resolution_agent.settings.gitea_token") %>
+    <%= form.password_field :gitea_token, value: nil, autocomplete: "new-password" %>
+  </p>
+  <%= form.submit t(:button_save) %>
+<% end %>

@@ -1,0 +1,52 @@
+<%= turbo_frame_tag "resolution-agent-tab-content" do %>
+  <h3><%= t("resolution_agent.title") %></h3>
+  <% if @denied %>
+    <p><%= @setting.enabled? ? t("resolution_agent.denied") : t("resolution_agent.errors.model_unready") %></p>
+  <% else %>
+    <% @messages.each do |message| %>
+      <article>
+        <strong><%= message.role == "user" ? t("resolution_agent.you") : t("resolution_agent.agent") %></strong>
+        <pre style="white-space: pre-wrap"><%= message.body %></pre>
+      </article>
+    <% end %>
+
+    <% if @conversation&.generating? %>
+      <p><%= t("resolution_agent.generating") %></p>
+    <% elsif !@runtime_ready %>
+      <p><%= t("resolution_agent.errors.model_unready") %></p>
+    <% else %>
+      <% @candidates.each do |principal| %>
+        <%= button_to principal.name,
+                      decision_project_work_package_resolution_agent_path(@project, @work_package),
+                      method: :post,
+                      form: { data: { turbo_frame: "resolution-agent-tab-content" } },
+                      params: { decision: "select_assignee", assignee_id: principal.id } %>
+      <% end %>
+
+      <%= form_with url: message_project_work_package_resolution_agent_path(@project, @work_package),
+                    method: :post,
+                    data: { turbo_frame: "resolution-agent-tab-content" } do |form| %>
+        <p><%= form.text_area :body, value: "", required: true, rows: 4 %></p>
+        <p>
+          <%= form.label :gitea_url, t("resolution_agent.gitea_url") %>
+          <%= form.text_field :gitea_url %>
+        </p>
+        <p>
+          <%= form.label :branch, t("resolution_agent.branch") %>
+          <%= form.text_field :branch %>
+        </p>
+        <%= form.submit t("resolution_agent.send") %>
+      <% end %>
+
+      <div>
+        <% decision_buttons.each do |action, label| %>
+          <%= button_to label,
+                        decision_project_work_package_resolution_agent_path(@project, @work_package),
+                        method: :post,
+                        form: { data: { turbo_frame: "resolution-agent-tab-content" } },
+                        params: { decision: action } %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

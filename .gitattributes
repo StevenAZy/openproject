@@ -1,3 +1,8 @@
 # explicitly mark lock files as generated to collapse in diffs
 Gemfile.lock linguist-generated
 package-lock.json linguist-generated
+
+# Linux containers execute these files; keep LF even when core.autocrlf is true
+*.erb text eol=lf
+*.sh text eol=lf
+docker/dev/** text eol=lf

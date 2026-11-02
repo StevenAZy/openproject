@@ -38,9 +38,12 @@ module ResolutionAgent
 
     def call
       conversation = Conversation.for_work_package(@work_package)
-      return say(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless @access.allowed_decision?(@action)
-      return say(conversation, I18n.t("resolution_agent.errors.missing_agent")) if @setting.service_account.blank?
-      return close_without_test(conversation) if @action == "supervisor_close" && !tested?(conversation)
+      return notice(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless @access.allowed_decision?(@action)
+
+      stage = Stage.new(conversation.runs.to_a)
+      return close_without_test(conversation) if @action == "supervisor_close" && !stage.latest_test_passed?
+      return notice(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless stage.action_allowed?(@action)
+      return notice(conversation, I18n.t("resolution_agent.errors.missing_agent")) if @setting.service_account.blank?
 
       fields = fields_for(conversation)
       summary = summary_for(fields)
@@ -49,10 +52,9 @@ module ResolutionAgent
 
       status, detail = WorkPackageChange.new(@work_package, agent: @setting.service_account).call(attributes:, summary:)
       if status == :error
-        say(conversation, I18n.t("resolution_agent.errors.workflow", reason: detail))
+        notice(conversation, I18n.t("resolution_agent.errors.workflow", reason: detail))
       else
-        message = say(conversation, summary)
-        message.update!(journal_id: detail, payload: fields.to_json)
+        record_outcome(conversation, fields, attributes, detail)
         conversation.runs.create!(outcome: @action, pull_request_url: latest_pull_request(conversation))
         conversation.update!(pending_action: nil, pending_summary: nil, pending_assignee_ids: nil)
       end
@@ -61,8 +63,7 @@ module ResolutionAgent
     private
 
     def fields_for(conversation)
-      previous = conversation.messages.where(role: "agent").order(:id).last&.payload_hash || {}
-      fields = previous.symbolize_keys
+      fields = latest_agent_fields(conversation)
       last_user = conversation.messages.where(role: "user").order(:id).last&.body
       if %w[test_passed test_failed].include?(@action) && last_user.present?
         fields[:attempts] = [fields[:attempts], last_user].compact.join("\n")
@@ -72,6 +73,16 @@ module ResolutionAgent
         fields[:direction] = [fields[:direction], url].compact.join("\n") if url.present?
       end
       fields.merge(conclusion: I18n.t("resolution_agent.conclusions.#{@action}"))
+    end
+
+    def latest_agent_fields(conversation)
+      conversation.messages.where(role: "agent").order(id: :desc).each do |message|
+        fields = message.payload_hash.symbolize_keys
+        return fields if fields.keys.intersect?(Summary::SECTIONS)
+        return { direction: fields[:answer] } if fields[:answer].present?
+        return { direction: message.body } if message.body.present?
+      end
+      {}
     end
 
     def summary_for(fields)
@@ -84,7 +95,7 @@ module ResolutionAgent
       status = @setting.status_for(@action)
       if %w[pe_resolved pe_unresolved fix_succeeded supervisor_close].include?(@action)
         if status.blank?
-          return say(conversation, I18n.t("resolution_agent.errors.missing_status", status: Setting::BUILTIN_STATUSES[@action]))
+          return notice(conversation, I18n.t("resolution_agent.errors.missing_status", status: Setting::BUILTIN_STATUSES[@action]))
         end
 
         attributes[:status_id] = status.id
@@ -107,51 +118,64 @@ module ResolutionAgent
       when :ok
         result.assignees.first.id
       when :choose
-        conversation.update!(pending_action: @action, pending_summary: summary, pending_assignee_ids: result.assignees.map(&:id).to_json)
-        say(conversation, choose_text(result.assignees))
+        conversation.update!(
+          pending_action: @action,
+          pending_summary: summary,
+          pending_assignee_ids: result.assignees.map(&:id).to_json
+        )
+        notice(conversation, I18n.t("resolution_agent.choose_assignee"))
       when :related_without_assignee
-        say_note(conversation, I18n.t("resolution_agent.errors.related_without_assignee"))
-        nil
+        note(conversation, I18n.t("resolution_agent.errors.related_without_assignee"))
       else
-        say_note(conversation, I18n.t("resolution_agent.errors.missing_supervisor"))
-        nil
+        note(conversation, I18n.t("resolution_agent.errors.missing_supervisor"))
       end
     end
 
     def forced_assignee(conversation)
       allowed = conversation.pending_assignee_list.map(&:to_i)
-      return say(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless allowed.include?(@assignee_id.to_i)
+      return notice(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless allowed.include?(@assignee_id.to_i)
 
       @assignee_id.to_i
     end
 
     def fix_failed_assignee(conversation)
-      conversation.runs.where.not(assignee_before_fix_id: nil).order(:id).last&.assignee_before_fix_id
+      assignee_id = Stage.new(conversation.runs.to_a).assignee_before_fix_id
+      return assignee_id if assignee_id.present?
+
+      note(conversation, I18n.t("resolution_agent.errors.missing_previous_assignee"))
     end
 
-    def choose_text(assignees)
-      lines = assignees.map { |principal| "#{principal.name} (#{principal.id})" }
-      I18n.t("resolution_agent.choose_assignee", people: lines.join("\n"))
-    end
-
-    def tested?(conversation)
-      conversation.runs.exists?(outcome: "test_passed")
-    end
-
-    def close_without_test(conversation)
-      say(conversation, I18n.t("resolution_agent.errors.close_without_test"))
+    def record_outcome(conversation, fields, attributes, journal_id)
+      status_name = Status.find_by(id: attributes[:status_id])&.name if attributes[:status_id]
+      assignee_name = Principal.find_by(id: attributes[:assigned_to_id])&.name if attributes[:assigned_to_id]
+      conversation.messages.create!(
+        role: "outcome",
+        body: fields[:conclusion].to_s,
+        journal_id:,
+        payload: {
+          conclusion: fields[:conclusion],
+          status_changed: attributes.key?(:status_id),
+          status_name:,
+          assignee_changed: attributes.key?(:assigned_to_id),
+          assignee_name:
+        }.to_json
+      )
     end
 
     def latest_pull_request(conversation)
       conversation.runs.where.not(pull_request_url: nil).order(:id).last&.pull_request_url
     end
 
-    def say(conversation, body)
-      conversation.messages.create!(role: "agent", body:)
+    def close_without_test(conversation)
+      notice(conversation, I18n.t("resolution_agent.errors.close_without_test"))
     end
 
-    def say_note(conversation, body)
-      conversation.messages.create!(role: "agent", body:)
+    def notice(conversation, body)
+      conversation.messages.create!(role: "notice", body:)
+    end
+
+    def note(conversation, body)
+      notice(conversation, body)
       nil
     end
   end

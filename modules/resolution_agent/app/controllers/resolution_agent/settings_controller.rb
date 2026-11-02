@@ -9,7 +9,6 @@ module ResolutionAgent
 
     def show
       @setting = Setting.instance
-      @users = User.not_locked.where(type: "User").order(:lastname, :firstname)
     end
 
     def update

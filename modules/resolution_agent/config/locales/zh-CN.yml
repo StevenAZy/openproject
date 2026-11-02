@@ -9,16 +9,67 @@ zh-CN:
     you: "你"
     agent: "代理"
     send: "发送"
+    message_placeholder: "给代理发送消息"
     generating: "正在生成回复。"
-    denied: "只有这条工作包的创建人、当前负责人，或能查看它的管理员可以打开代理。"
+    denied: "只有这条工作包的创建人、当前负责人、配置的研发主管，或能查看它的管理员可以打开代理。"
     gitea_url: "Gitea 仓库地址"
     branch: "分支"
+    code_fix: "尝试修复代码"
+    more_fields: "查看现场材料"
+    generating_reply: "正在生成回复。"
+    waiting_time: "已等待 %{seconds} 秒"
+    waiting_time_template: "已等待 __SECONDS__ 秒"
+    generation_phases:
+      queued: "正在排队"
+      analyzing: "正在分析工作包"
+      reading_repository: "正在读取代码仓库"
+      generating: "正在生成回复"
+      creating_fix: "正在创建代码修复和 Pull Request"
+    job:
+      title: "生成代理回复"
     settings_hint: "服务账号需要能查看和编辑工作包，并能添加评论。结果直接使用内置状态 Tested、In progress、In testing、Closed，工作流要允许这个账号做对应跳转。密钥留空则保留已保存的值。"
-    choose_assignee: "关联工作包的负责人不同，请选一个：\n%{people}"
+    choose_assignee: "关联工作包的负责人不同，请选一个。"
+    empty:
+      author: "写下现场现象。"
+    stages:
+      collecting:
+        author: "待现场结论。你可以描述现象，或记录已解决 / 未解决。"
+        other: "待现场结论。创建人描述现象后才能继续。"
+      with_rd:
+        assignee: "已交给研发。你可以继续对话，或展开代码修复后记录修复结果。"
+        other: "已交给研发。当前负责人处理代码修复。"
+      in_testing:
+        author: "验收中。写下现场测试情况，再记录测试通过或未通过。"
+        other: "验收中。创建人记录现场测试结果。"
+      testing_failed:
+        both: "测试未通过。你可以再做一次代码修复，也可以再次记录测试结果。"
+        author: "测试未通过。你可以再次记录测试结果。"
+        assignee: "测试未通过。你可以再做一次代码修复。"
+        other: "测试未通过。"
+      awaiting_close:
+        supervisor: "待关闭。你可以确认完成。"
+        other: "待关闭。研发主管确认后才会关闭。"
+      closed:
+        all: "已关闭。这段对话只供查阅。"
+    effects:
+      pe_resolved: "状态改为 Tested，并写一条总结评论。"
+      pe_unresolved: "状态改为 In progress，描述改为总结并保留原始记录。"
+      fix_succeeded: "状态改为 In testing，并写一条总结评论。"
+      fix_failed: "状态不变，负责人交回这次修复前的人，并写一条总结评论。"
+      test_passed: "记录测试通过。状态不变，等待主管确认完成。"
+      test_failed: "记录测试未通过。状态保持 In testing。"
+      supervisor_close: "状态改为 Closed，并写一条总结评论。"
+    outcome:
+      status_changed: "状态改为 %{status}"
+      status_unchanged: "状态没有变化"
+      assignee_changed: "负责人改为 %{name}"
+      assignee_unchanged: "负责人没有变化"
     settings:
       enabled: "启用"
       service_account: "服务账号"
       supervisor: "R&D 主管"
+      accounts: "服务账号与研发主管"
+      gitea: "Gitea"
       llm: "模型"
       llm_hint: "使用 OpenAI 兼容接口。本地模型填写它的地址，一般以 /v1 结尾。服务不需要密钥时留空。"
       llm_base_url: "API 地址"
@@ -38,14 +89,23 @@ zh-CN:
       unavailable: "这条工作包上不能使用代理。"
       empty: "请先输入内容。"
       busy: "正在生成回复。"
+      enqueue_failed: "回复任务未能加入队列，请重试。"
       generation_failed: "没有生成回复。工作包没有被修改。"
+      timeout: "模型在 180 秒内没有回复，请重试。"
+      connection: "无法连接模型服务，请检查服务后重试。"
+      authentication: "模型服务拒绝了认证信息，请联系管理员检查 AI 设置。"
+      configuration: "模型配置无效，请联系管理员检查 AI 设置。"
+      rate_limited: "模型服务繁忙或已限流，请稍后重试。"
+      invalid_response: "模型返回的内容格式无效，请重试。"
+      record_reply_failed: "回复已经生成，但无法更新工作包描述和活动。%{reason}"
       model_unready: "代理未启用，或还没有配置模型。"
       not_allowed: "你不能记录这个结果。"
       missing_agent: "没有配置服务账号，工作包没有被修改。"
       missing_status: "找不到内置状态 %{status}，工作包没有被修改。"
       missing_supervisor: "没有配置 R&D 主管，负责人没有被修改。"
       related_without_assignee: "关联工作包没有负责人，负责人没有被修改。"
-      close_without_test: "还没有记录测试通过，工作包不会关闭。"
+      close_without_test: "最新的测试记录还不是通过，工作包不会关闭。"
+      missing_previous_assignee: "没有记下修复前的负责人，负责人没有被修改。"
       workflow: "工作流不允许这次变更，描述、评论、负责人和状态都保持原样。%{reason}"
     conclusions:
       pe_resolved: "已在现场解决"
@@ -54,7 +114,7 @@ zh-CN:
       fix_failed: "代码修复没有成功"
       test_passed: "测试通过"
       test_failed: "测试未通过"
-      supervisor_close: "测试通过"
+      supervisor_close: "已确认完成"
     summary:
       conclusion: "当前结论"
       environment: "环境"
@@ -67,9 +127,9 @@ zh-CN:
       no_log: "无日志附件"
     prompt:
       instructions: |
-        你是工作包代理。只根据下面这一条工作包的材料回答，不要使用其他工作包的描述、评论或附件。
-        材料里没有的事实写「%{missing}」。没有日志正文时，日志解读写「%{no_log}」。
-        不要编造日志、报错或代码。
+        你是工作包代理。只根据下面这一条工作包的材料和用户消息回答，不要使用其他工作包的描述、评论或附件。
+        回答尽量写成一段连贯、自然的话，不要输出字段名、填空表格、检查清单或标题。把相关背景、判断和下一步建议合并在这段回答中。材料不足时直接说明，不要编造日志、报错或代码。
+        answer 放给用户看的完整回答，file_changes 放用户要求的代码修改。
         %{code_instruction}
         %{code_section}
         材料:

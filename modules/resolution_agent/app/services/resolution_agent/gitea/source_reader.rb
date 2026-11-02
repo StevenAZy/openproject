@@ -45,7 +45,7 @@ module ResolutionAgent
       def choose_paths(paths)
         return [] if paths.empty?
 
-        chat = @setting.llm_chat
+        chat = @setting.llm_chat(max_retries: 0)
         chat = chat.with_schema(PATH_SCHEMA) if chat.respond_to?(:with_schema)
         message = chat.ask(
           I18n.t(

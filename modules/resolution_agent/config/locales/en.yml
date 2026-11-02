@@ -9,16 +9,67 @@ en:
     you: "You"
     agent: "Agent"
     send: "Send"
+    message_placeholder: "Message the agent"
     generating: "A reply is already being generated."
-    denied: "Only the author, the current assignee, or an administrator who can view this work package can open this agent."
+    denied: "Only the author, the current assignee, the configured R&D supervisor, or an administrator who can view this work package can open this agent."
     gitea_url: "Gitea repository URL"
     branch: "Branch"
+    code_fix: "Try a code fix"
+    more_fields: "Field details"
+    generating_reply: "Generating a reply."
+    waiting_time: "Waiting for %{seconds} seconds"
+    waiting_time_template: "Waiting for __SECONDS__ seconds"
+    generation_phases:
+      queued: "Queued for processing"
+      analyzing: "Analyzing the work package"
+      reading_repository: "Reading the repository"
+      generating: "Generating a reply"
+      creating_fix: "Creating the code fix and pull request"
+    job:
+      title: "Generate an agent reply"
     settings_hint: "The service account needs permission to view and edit the work package and to add comments. Outcomes use the built-in statuses Tested, In progress, In testing, and Closed, so the workflow must allow those transitions. Leave a secret blank to keep the saved value."
-    choose_assignee: "Several related work packages have different assignees. Choose one:\n%{people}"
+    choose_assignee: "Related work packages have different assignees. Choose one."
+    empty:
+      author: "Describe what is happening on site."
+    stages:
+      collecting:
+        author: "Waiting for a field conclusion. Describe what you see, or record resolved / not resolved."
+        other: "Waiting for a field conclusion. The author continues this step."
+      with_rd:
+        assignee: "Handed to R&D. Continue the conversation, or open a code fix and then record the result."
+        other: "Handed to R&D. The current assignee handles the code fix."
+      in_testing:
+        author: "In testing. Write the field test result, then record passed or failed."
+        other: "In testing. The author records the field test."
+      testing_failed:
+        both: "The test failed. You can try another code fix, and you can record the test again."
+        author: "The test failed. You can record the test again."
+        assignee: "The test failed. You can try another code fix."
+        other: "The test failed."
+      awaiting_close:
+        supervisor: "Waiting to close. You can confirm completion."
+        other: "Waiting to close. The R&D supervisor confirms completion."
+      closed:
+        all: "Closed. This conversation is read only."
+    effects:
+      pe_resolved: "Status becomes Tested, and a summary comment is added."
+      pe_unresolved: "Status becomes In progress. The description becomes the summary and keeps the original record."
+      fix_succeeded: "Status becomes In testing, and a summary comment is added."
+      fix_failed: "Status stays the same. The assignee returns to the person from before this fix, and a summary comment is added."
+      test_passed: "Records a passed test. Status stays the same until the supervisor confirms completion."
+      test_failed: "Records a failed test. Status stays In testing."
+      supervisor_close: "Status becomes Closed, and a summary comment is added."
+    outcome:
+      status_changed: "Status becomes %{status}"
+      status_unchanged: "Status was not changed"
+      assignee_changed: "Assignee becomes %{name}"
+      assignee_unchanged: "Assignee was not changed"
     settings:
       enabled: "Enabled"
       service_account: "Service account"
       supervisor: "R&D supervisor"
+      accounts: "Service account and R&D supervisor"
+      gitea: "Gitea"
       llm: "Model"
       llm_hint: "OpenAI-compatible API. For a local model, enter its base URL, usually ending in /v1. Leave the key blank when the server does not require one."
       llm_base_url: "API base URL"
@@ -38,14 +89,23 @@ en:
       unavailable: "This agent is not available on this work package."
       empty: "Enter a message first."
       busy: "A reply is already being generated."
+      enqueue_failed: "The reply could not be queued. Please try again."
       generation_failed: "The reply was not generated. The work package was not changed."
+      timeout: "The model did not reply within 180 seconds. Please try again."
+      connection: "The model service could not be reached. Check the service and try again."
+      authentication: "The model service rejected its credentials. Ask an administrator to check the AI settings."
+      configuration: "The model configuration is invalid. Ask an administrator to check the AI settings."
+      rate_limited: "The model service is busy or rate limited. Please try again later."
+      invalid_response: "The model returned an invalid response. Please try again."
+      record_reply_failed: "The reply was generated, but the work package description and activity could not be updated. %{reason}"
       model_unready: "The agent is switched off, or its model is not configured."
       not_allowed: "You cannot record this outcome."
       missing_agent: "No service account is configured, so the work package was not changed."
       missing_status: "The built-in status %{status} was not found, so the work package was not changed."
       missing_supervisor: "No R&D supervisor is configured, so the assignee was not changed."
       related_without_assignee: "The related work packages have no assignee, so the assignee was not changed."
-      close_without_test: "The work package stays open until a passed field test is recorded."
+      close_without_test: "The latest test is not a pass, so the work package will not be closed."
+      missing_previous_assignee: "The assignee from before the fix was not recorded, so the assignee was not changed."
       workflow: "The workflow does not allow this change, so the description, comment, assignee, and status were left unchanged. %{reason}"
     conclusions:
       pe_resolved: "Resolved on site"
@@ -54,7 +114,7 @@ en:
       fix_failed: "The code fix did not succeed"
       test_passed: "Test passed"
       test_failed: "Test failed"
-      supervisor_close: "Test passed"
+      supervisor_close: "Confirmed complete"
     summary:
       conclusion: "Current conclusion"
       environment: "Environment"
@@ -67,9 +127,9 @@ en:
       no_log: "No log attachment"
     prompt:
       instructions: |
-        You are the work package agent. Answer only from the materials for this one work package. Do not use descriptions, comments, or attachments from other work packages.
-        Write "%{missing}" for facts that are not in the materials. When there is no log body, write "%{no_log}" for the log reading.
-        Do not invent logs, errors, or code.
+        You are the work package agent. Answer only from the materials for this one work package and the user's message. Do not use descriptions, comments, or attachments from other work packages.
+        Write answer as one cohesive, natural paragraph whenever possible. Do not output field labels, a form, a checklist, or headings. Combine the relevant context, diagnosis, and next step into that answer. If the materials are insufficient, say so plainly. Do not invent logs, errors, or code.
+        Return answer with the user-facing prose and file_changes with any requested code changes.
         %{code_instruction}
         %{code_section}
         Materials:

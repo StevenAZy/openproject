@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   resources :projects, only: [] do
     resources :work_packages, only: [] do
       resource :resolution_agent, only: [:show], controller: "resolution_agent/panels" do
+        get :status
         post :message
         post :decision
       end

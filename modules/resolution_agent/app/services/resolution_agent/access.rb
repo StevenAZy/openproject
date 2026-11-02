@@ -12,7 +12,7 @@ module ResolutionAgent
       return false unless @setting.enabled?
       return false unless @work_package.visible?(@user)
 
-      @user.admin? || author? || assignee?
+      @user.admin? || author? || assignee? || supervisor?
     end
 
     def author? = @user.id == @work_package.author_id

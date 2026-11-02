@@ -2,7 +2,7 @@
 
 module ResolutionAgent
   class PanelsController < ApplicationController
-    authorization_checked! :show, :message, :decision
+    authorization_checked! :show, :message, :decision, :status
 
     before_action :find_project_by_project_id
     before_action :find_work_package
@@ -15,8 +15,23 @@ module ResolutionAgent
       render layout: false
     end
 
+    def status
+      load_panel
+      return head :not_found unless valid_job_status?
+
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.replace(
+            "resolution-agent-tab-content",
+            template: "resolution_agent/panels/show"
+          )
+        end
+        format.html { redirect_to panel_path }
+      end
+    end
+
     def message
-      return redirect_to(panel_path) if @denied
+      return redirect_to(panel_path, status: :see_other) if @denied
 
       result = Chat.call(
         user: current_user,
@@ -25,17 +40,17 @@ module ResolutionAgent
         gitea_url: params[:gitea_url],
         branch: params[:branch]
       )
-      remember_error(result.error)
-      redirect_to panel_path
+      flash[:error] = result.error if result.error.present?
+      redirect_to panel_path, status: :see_other
     end
 
     def decision
-      return redirect_to(panel_path) if @denied
+      return redirect_to(panel_path, status: :see_other) if @denied
 
       conversation = Conversation.for_work_package(@work_package)
       unless claim(conversation)
-        conversation.messages.create!(role: "agent", body: I18n.t("resolution_agent.errors.busy"))
-        return redirect_to(panel_path)
+        conversation.messages.create!(role: "notice", body: I18n.t("resolution_agent.errors.busy"))
+        return redirect_to(panel_path, status: :see_other)
       end
 
       begin
@@ -48,7 +63,7 @@ module ResolutionAgent
       ensure
         conversation.update!(generating: false)
       end
-      redirect_to panel_path
+      redirect_to panel_path, status: :see_other
     end
 
     private
@@ -65,9 +80,20 @@ module ResolutionAgent
 
     def load_panel
       @conversation = Conversation.find_by(work_package: @work_package)
-      @messages = @conversation&.messages&.order(:id) || []
+      @conversation&.recover_stale_generation!
+      @messages = @conversation&.messages&.includes(:user)&.order(:id) || Message.none
+      @stage = Stage.new(@conversation&.runs&.to_a || [])
       @runtime_ready = llm_ready?
       @candidates = candidates
+      @polled_job_finished = action_name == "status" && !@conversation&.generating? && known_generation_job?
+    end
+
+    def valid_job_status?
+      !@denied && known_generation_job?
+    end
+
+    def known_generation_job?
+      params[:job].present? && @conversation&.generation_job_id == params[:job]
     end
 
     def panel_path
@@ -92,21 +118,16 @@ module ResolutionAgent
       action
     end
 
-    def remember_error(error)
-      return if error.blank?
-
-      conversation = Conversation.find_by(work_package: @work_package)
-      conversation&.messages&.create!(role: "agent", body: error)
-    end
-
     def llm_ready?
       @setting.enabled? && @setting.llm_ready?
     end
 
     def candidates
+      return [] unless @access.author?
       return [] if @conversation&.pending_assignee_ids.blank?
 
-      Principal.where(id: @conversation.pending_assignee_list)
+      ids = @conversation.pending_assignee_list.map(&:to_i)
+      Principal.where(id: ids).index_by(&:id).values_at(*ids).compact
     end
   end
 end

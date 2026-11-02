@@ -5,6 +5,7 @@ module ResolutionAgent
     self.table_name = "resolution_agent_messages"
 
     belongs_to :conversation, class_name: "ResolutionAgent::Conversation"
+    belongs_to :user, optional: true
 
     def payload_hash
       JSON.parse(payload.presence || "{}")

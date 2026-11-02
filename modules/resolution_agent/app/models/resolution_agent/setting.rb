@@ -39,8 +39,8 @@ module ResolutionAgent
       llm_base_url.present? && llm_model.present?
     end
 
-    def llm_chat
-      Llm::Session.for(endpoint).chat(llm_model)
+    def llm_chat(max_retries: 1)
+      Llm::Session.for(endpoint, max_retries:).chat(llm_model)
     end
 
     def endpoint

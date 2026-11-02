@@ -1,52 +1,196 @@
 <%= turbo_frame_tag "resolution-agent-tab-content" do %>
-  <h3><%= t("resolution_agent.title") %></h3>
-  <% if @denied %>
-    <p><%= @setting.enabled? ? t("resolution_agent.denied") : t("resolution_agent.errors.model_unready") %></p>
-  <% else %>
-    <% @messages.each do |message| %>
-      <article>
-        <strong><%= message.role == "user" ? t("resolution_agent.you") : t("resolution_agent.agent") %></strong>
-        <pre style="white-space: pre-wrap"><%= message.body %></pre>
-      </article>
+  <style>
+    .resolution-agent { display: flex; flex-direction: column; gap: 12px; min-height: 32rem; max-height: calc(100vh - 8rem); }
+    .resolution-agent__transcript { flex: 1 1 auto; overflow: auto; display: flex; flex-direction: column; gap: 16px; padding: 16px; border: 1px solid var(--borderColor-muted, #d0d7de); border-radius: 8px; background: var(--bgColor-muted, #f6f8fa); }
+    .resolution-agent__message { display: flex; align-items: flex-start; gap: 8px; width: 100%; }
+    .resolution-agent__message--user { justify-content: flex-end; }
+    .resolution-agent__bubble { max-width: 85%; padding: 10px 14px; border-radius: 14px; background: var(--bgColor-default, canvas); box-shadow: 0 1px 2px rgba(31, 35, 40, 0.08); }
+    .resolution-agent__message--user .resolution-agent__bubble { background: var(--bgColor-accent-muted, #ddf4ff); border-bottom-right-radius: 4px; }
+    .resolution-agent__message--agent .resolution-agent__bubble { border-bottom-left-radius: 4px; }
+    .resolution-agent__avatar { flex: 0 0 28px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--bgColor-accent-emphasis, #0969da); color: var(--fgColor-onEmphasis, #fff); font-size: 11px; font-weight: 600; }
+    .resolution-agent__meta { margin-bottom: 4px; color: var(--fgColor-muted, #656d76); font-size: 12px; }
+    .resolution-agent__body { overflow-wrap: anywhere; white-space: pre-wrap; }
+    .resolution-agent__composer { position: sticky; bottom: 0; padding-top: 8px; background: var(--bgColor-default, canvas); }
+    .resolution-agent__composer textarea { min-height: 88px; padding: 12px; border-radius: 10px; resize: vertical; }
+    .resolution-agent__composer-actions { display: flex; justify-content: flex-end; }
+    .resolution-agent__generating { display: flex; align-items: center; gap: 8px; }
+    .resolution-agent textarea,
+    .resolution-agent input[type="text"],
+    .resolution-agent input[type="url"] { box-sizing: border-box; width: 100%; }
+    .resolution-agent details summary { cursor: pointer; }
+  </style>
+
+  <div class="resolution-agent" data-controller="resolution-agent--polling">
+    <% if flash[:error].present? %>
+      <%= render(Primer::Alpha::Banner.new(scheme: :danger, icon: :alert, mb: 2)) { flash[:error] } %>
     <% end %>
 
-    <% if @conversation&.generating? %>
-      <p><%= t("resolution_agent.generating") %></p>
-    <% elsif !@runtime_ready %>
-      <p><%= t("resolution_agent.errors.model_unready") %></p>
+    <% if @denied %>
+      <%= render(Primer::Alpha::Banner.new(scheme: :warning, icon: :alert)) do %>
+        <%= @setting.enabled? ? t("resolution_agent.denied") : t("resolution_agent.errors.model_unready") %>
+      <% end %>
     <% else %>
-      <% @candidates.each do |principal| %>
-        <%= button_to principal.name,
-                      decision_project_work_package_resolution_agent_path(@project, @work_package),
-                      method: :post,
-                      form: { data: { turbo_frame: "resolution-agent-tab-content" } },
-                      params: { decision: "select_assignee", assignee_id: principal.id } %>
+      <%= render(Primer::Beta::Text.new(tag: :p, color: :muted, mb: 0)) { stage_caption } %>
+
+      <% unless @runtime_ready %>
+        <%= render(Primer::Alpha::Banner.new(scheme: :warning, icon: :alert)) { t("resolution_agent.errors.model_unready") } %>
       <% end %>
 
-      <%= form_with url: message_project_work_package_resolution_agent_path(@project, @work_package),
-                    method: :post,
-                    data: { turbo_frame: "resolution-agent-tab-content" } do |form| %>
-        <p><%= form.text_area :body, value: "", required: true, rows: 4 %></p>
-        <p>
-          <%= form.label :gitea_url, t("resolution_agent.gitea_url") %>
-          <%= form.text_field :gitea_url %>
-        </p>
-        <p>
-          <%= form.label :branch, t("resolution_agent.branch") %>
-          <%= form.text_field :branch %>
-        </p>
-        <%= form.submit t("resolution_agent.send") %>
-      <% end %>
+      <div class="resolution-agent__transcript" data-resolution-agent--polling-target="transcript">
+        <% @messages.each do |message| %>
+          <% case message.role %>
+          <% when "user" %>
+            <div class="resolution-agent__message resolution-agent__message--user">
+              <div class="resolution-agent__bubble">
+                <div class="resolution-agent__meta">
+                  <%= message.user&.name || t("resolution_agent.you") %>
+                  ·
+                  <%= format_time(message.created_at) %>
+                </div>
+                <div class="resolution-agent__body"><%= resolution_agent_body(message.body) %></div>
+              </div>
+            </div>
+          <% when "agent" %>
+            <div class="resolution-agent__message resolution-agent__message--agent">
+              <div class="resolution-agent__avatar" aria-hidden="true">AI</div>
+              <div class="resolution-agent__bubble">
+                <div class="resolution-agent__meta"><%= t("resolution_agent.agent") %> · <%= format_time(message.created_at) %></div>
+                <% if agent_structured?(message) %>
+                  <div class="resolution-agent__body"><%= resolution_agent_body(agent_direction(message)) %></div>
+                  <details>
+                    <summary><%= t("resolution_agent.more_fields") %></summary>
+                    <% agent_details(message).each do |label, value| %>
+                      <%= render(Primer::Beta::Text.new(tag: :div, font_weight: :bold, mt: 2)) { label } %>
+                      <div class="resolution-agent__body"><%= resolution_agent_body(value) %></div>
+                    <% end %>
+                  </details>
+                <% else %>
+                  <%= tag.div(
+                        class: "resolution-agent__body",
+                        data: animate_agent_message?(message) ? { resolution_agent__polling_target: "typing" } : {}
+                      ) { resolution_agent_body(message.body) } %>
+                <% end %>
+              </div>
+            </div>
+          <% when "outcome" %>
+            <%= render(Primer::Box.new(border: true, border_radius: 2, p: 3, mb: 2)) do %>
+              <%= render(Primer::Beta::Text.new(tag: :div, font_weight: :bold)) { outcome_conclusion(message) } %>
+              <%= render(Primer::Beta::Text.new(tag: :div, mt: 1)) { outcome_status_line(message) } %>
+              <%= render(Primer::Beta::Text.new(tag: :div)) { outcome_assignee_line(message) } %>
+            <% end %>
+          <% when "notice" %>
+            <%= render(Primer::Alpha::Banner.new(scheme: :warning, icon: :alert, mb: 2)) { message.body } %>
+          <% end %>
+        <% end %>
 
-      <div>
-        <% decision_buttons.each do |action, label| %>
-          <%= button_to label,
-                        decision_project_work_package_resolution_agent_path(@project, @work_package),
-                        method: :post,
-                        form: { data: { turbo_frame: "resolution-agent-tab-content" } },
-                        params: { decision: action } %>
+        <% if generating? %>
+          <%= tag.span hidden: true,
+                       data: {
+                         resolution_agent__polling_target: "poll",
+                         url: generation_poll_path
+                       } %>
+          <div class="resolution-agent__message resolution-agent__message--agent">
+            <div class="resolution-agent__avatar" aria-hidden="true">AI</div>
+            <%= render(Primer::Box.new(bg: :default, p: 3, border_radius: 2, classes: "resolution-agent__bubble")) do %>
+              <div class="resolution-agent__generating" role="status" aria-live="polite">
+                <%= render(Primer::Beta::Spinner.new(size: :small)) %>
+                <div>
+                  <%= render(Primer::Beta::Text.new(tag: :div, font_weight: :bold)) { generation_caption } %>
+                  <%= render(
+                        Primer::Beta::Text.new(
+                          tag: :div,
+                          color: :muted,
+                          font_size: :small,
+                          data: {
+                            resolution_agent__polling_target: "elapsed",
+                            started_at: generation_started_at_ms,
+                            template: t("resolution_agent.waiting_time_template")
+                          }
+                        )
+                      ) { t("resolution_agent.waiting_time", seconds: generation_elapsed) } %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% elsif @polled_job_finished %>
+          <%= tag.span hidden: true, data: { resolution_agent__polling_target: "finished" } %>
+        <% end %>
+
+        <% if @messages.empty? && !generating? %>
+          <%= render(Primer::Beta::Blankslate.new(border: false)) do |blankslate| %>
+            <% blankslate.with_heading(tag: :h3) { empty_caption } %>
+          <% end %>
         <% end %>
       </div>
+
+      <% if show_outcome_bar? %>
+        <div>
+          <% if pending_choice? %>
+            <%= render(Primer::Beta::Text.new(tag: :p, mb: 2)) { t("resolution_agent.choose_assignee") } %>
+            <% @candidates.each do |principal| %>
+              <%= form_with url: decision_project_work_package_resolution_agent_path(@project, @work_package),
+                            method: :post,
+                            data: { turbo_frame: "resolution-agent-tab-content" } do %>
+                <%= hidden_field_tag :decision, "select_assignee" %>
+                <%= hidden_field_tag :assignee_id, principal.id %>
+                <%= render(Primer::Beta::Button.new(type: :submit, mb: 2, mr: 2, disabled: generating?)) { principal.name } %>
+              <% end %>
+            <% end %>
+          <% else %>
+            <% decision_buttons.each do |button| %>
+              <%= form_with url: decision_project_work_package_resolution_agent_path(@project, @work_package),
+                            method: :post,
+                            data: { turbo_frame: "resolution-agent-tab-content" } do %>
+                <%= hidden_field_tag :decision, button[:action] %>
+                <%= render(Primer::Beta::Button.new(type: :submit, mb: 1, disabled: generating?)) { button[:label] } %>
+                <%= render(Primer::Beta::Text.new(tag: :p, color: :muted, font_size: :small, mb: 2)) { button[:effect] } %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if show_composer? %>
+        <div class="resolution-agent__composer">
+          <%= form_with url: message_project_work_package_resolution_agent_path(@project, @work_package),
+                        method: :post,
+                        data: {
+                          turbo_frame: "resolution-agent-tab-content",
+                          action: "submit->resolution-agent--polling#submitting"
+                        } do |form| %>
+            <%= form.text_area :body,
+                               value: "",
+                               required: !generating?,
+                               rows: 4,
+                               disabled: generating?,
+                               placeholder: t("resolution_agent.message_placeholder") %>
+            <% if show_code_fields? %>
+              <details>
+                <summary><%= t("resolution_agent.code_fix") %></summary>
+                <p>
+                  <%= form.label :gitea_url, t("resolution_agent.gitea_url") %>
+                  <%= form.text_field :gitea_url, disabled: generating? %>
+                </p>
+                <p>
+                  <%= form.label :branch, t("resolution_agent.branch") %>
+                  <%= form.text_field :branch, disabled: generating? %>
+                </p>
+              </details>
+            <% end %>
+            <div class="resolution-agent__composer-actions">
+              <%= render(
+                    Primer::Beta::Button.new(
+                      scheme: :primary,
+                      type: :submit,
+                      mt: 2,
+                      disabled: generating?,
+                      data: { resolution_agent__polling_target: "submit" }
+                    )
+                  ) { t("resolution_agent.send") } %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
 <% end %>

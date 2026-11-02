@@ -20,6 +20,10 @@ RSpec.describe ResolutionAgent::Access do
     expect(access_for(5)).not_to be_open
   end
 
+  it "opens for the configured supervisor when they can view the work package" do
+    expect(access_for(9)).to be_open
+  end
+
   it "lets an administrator who can view the work package open it" do
     expect(access_for(8, admin: true)).to be_open
   end

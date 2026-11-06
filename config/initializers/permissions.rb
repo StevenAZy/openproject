@@ -229,14 +229,6 @@ Rails.application.reloader.to_prepare do
                      permissible_on: :project,
                      contract_actions: { members: %i[read] }
 
-      map.permission :manage_versions,
-                     {
-                       "projects/settings/versions": [:show],
-                       versions: %i[new create edit update close_completed destroy]
-                     },
-                     permissible_on: :project,
-                     require: :member
-
       map.permission :add_subprojects,
                      { projects: %i[new create],
                        "projects/identifier_suggestion": %i[show] },
@@ -278,13 +270,6 @@ Rails.application.reloader.to_prepare do
                      permissible_on: :project_query,
                      require: :loggedin
 
-      map.permission :manage_own_working_times,
-                     {},
-                     permissible_on: :global
-
-      map.permission :manage_working_times,
-                     {},
-                     permissible_on: :global
     end
 
     map.project_module :work_package_tracking, order: 90 do |wpt|
@@ -292,18 +277,13 @@ Rails.application.reloader.to_prepare do
 
       wpt.permission :view_work_packages,
                      {
-                       versions: %i[index show status_by],
                        journals: %i[index],
-                       work_packages: %i[show index split_view show_conflict_flash_message share_upsell],
+                       work_packages: %i[show index split_view show_conflict_flash_message],
                        work_packages_api: [:get],
-                       "work_packages/reports": %i[report report_details],
                        "work_packages/activities_tab": %i[index page_streams item_actions update_streams update_sorting
                                                           update_filter],
                        "work_packages/menus": %i[show],
-                       "work_packages/hover_card": %i[show],
-                       work_package_relations_tab: %i[index],
-                       "work_packages/reminders": %i[modal_body create update destroy],
-                       "work_packages/project_attributes_tab": %i[index]
+                       "work_packages/hover_card": %i[show]
                      },
                      permissible_on: %i[work_package project],
                      contract_actions: { work_packages: %i[read] }
@@ -480,20 +460,6 @@ Rails.application.reloader.to_prepare do
                      require: :member,
                      dependencies: :view_work_packages
 
-      wpt.permission :manage_work_package_relations,
-                     {
-                       work_package_relations: %i[edit update create destroy]
-                     },
-                     permissible_on: %i[work_package project],
-                     dependencies: :view_work_packages
-
-      wpt.permission :manage_subtasks,
-                     {
-                       work_package_hierarchy_relations: %i[new create destroy],
-                       work_package_children: %i[new create refresh_form]
-                     },
-                     permissible_on: :project,
-                     dependencies: :view_work_packages
       # Queries
       wpt.permission :manage_public_queries,
                      {},
@@ -506,41 +472,6 @@ Rails.application.reloader.to_prepare do
                      require: :loggedin,
                      dependencies: :view_work_packages,
                      contract_actions: { queries: %i[create] }
-      # Watchers
-      wpt.permission :view_work_package_watchers,
-                     {},
-                     permissible_on: :project,
-                     dependencies: :view_work_packages
-
-      wpt.permission :add_work_package_watchers,
-                     {},
-                     permissible_on: :project,
-                     dependencies: :view_work_packages
-
-      wpt.permission :delete_work_package_watchers,
-                     {},
-                     permissible_on: :project,
-                     dependencies: :view_work_packages
-
-      map.permission :share_work_packages,
-                     {
-                       members: %i[destroy_by_principal]
-                     },
-                     permissible_on: :project,
-                     dependencies: %i[edit_work_packages view_shared_work_packages],
-                     require: :member
-
-      map.permission :view_shared_work_packages,
-                     {},
-                     permissible_on: :project,
-                     require: :member,
-                     contract_actions: { work_package_shares: %i[index] }
-
-      wpt.permission :assign_versions,
-                     {},
-                     permissible_on: :project,
-                     dependencies: :view_work_packages
-
       # WP status can be changed with :edit_work_packages, this permission allows it without Edit WP as well.
       wpt.permission :change_work_package_status,
                      {},
@@ -558,96 +489,5 @@ Rails.application.reloader.to_prepare do
                      grant_to_admin: false
     end
 
-    map.project_module :news do |news|
-      news.enabled_by_default!
-
-      news.permission :view_news,
-                      { news: %i[index show] },
-                      permissible_on: :project,
-                      public: true
-
-      news.permission :manage_news,
-                      {
-                        news: %i[new create edit update destroy preview],
-                        "news/comments": [:destroy]
-                      },
-                      permissible_on: :project,
-                      require: :member
-
-      news.permission :comment_news,
-                      { "news/comments": :create },
-                      permissible_on: :project
-    end
-
-    map.project_module :repository do |repo|
-      repo.permission :browse_repository,
-                      { repositories: %i[show browse entry annotate changes diff stats graph] },
-                      permissible_on: :project
-
-      repo.permission :commit_access,
-                      {},
-                      permissible_on: :project
-
-      repo.permission :manage_repository,
-                      {
-                        repositories: %i[edit create update committers destroy_info destroy],
-                        "projects/settings/repository": :show
-                      },
-                      permissible_on: :project,
-                      require: :member
-
-      repo.permission :view_changesets,
-                      { repositories: %i[show revisions revision] },
-                      permissible_on: :project
-
-      repo.permission :view_commit_author_statistics,
-                      {},
-                      permissible_on: :project
-    end
-
-    map.project_module :forums do |forum|
-      forum.permission :manage_forums,
-                       { forums: %i[new create edit update move destroy] },
-                       permissible_on: :project,
-                       require: :member
-
-      forum.permission :view_messages,
-                       { forums: %i[index show],
-                         messages: %i[show replies] },
-                       permissible_on: :project,
-                       public: true
-
-      forum.permission :add_messages,
-                       { messages: %i[new create reply quote preview] },
-                       permissible_on: :project
-
-      forum.permission :edit_messages,
-                       { messages: %i[edit update preview] },
-                       permissible_on: :project,
-                       require: :member
-
-      forum.permission :edit_own_messages,
-                       { messages: %i[edit update preview] },
-                       permissible_on: :project,
-                       require: :loggedin
-
-      forum.permission :delete_messages,
-                       { messages: :destroy },
-                       permissible_on: :project,
-                       require: :member
-
-      forum.permission :delete_own_messages,
-                       { messages: :destroy },
-                       permissible_on: :project,
-                       require: :loggedin
-    end
-
-    map.project_module :activity do
-      map.permission :view_project_activity,
-                     { activities: %i[index menu] },
-                     permissible_on: :project,
-                     public: true,
-                     contract_actions: { activities: %i[read] }
-    end
   end
 end

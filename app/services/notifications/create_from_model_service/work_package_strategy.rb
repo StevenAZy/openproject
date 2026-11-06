@@ -42,8 +42,8 @@ module Notifications::CreateFromModelService::WorkPackageStrategy
     end
   end
 
-  def self.mentionable_users(users, _journal)
-    users
+  def self.mentionable_users(users, journal)
+    users.where(id: event_users(journal))
   end
 
   def self.supports_ian?(_reason)
@@ -59,11 +59,23 @@ module Notifications::CreateFromModelService::WorkPackageStrategy
   end
 
   def self.watcher_users(journal)
-    User.watcher_recipients(journal.journable)
+    event_users(journal)
   end
 
   def self.shared_users(journal)
-    journal.journable.member_principals
+    event_users(journal)
+  end
+
+  def self.event_users(journal)
+    work_package = journal.journable
+    recipient_ids = [work_package.author_id]
+    recipient_ids << work_package.assigned_to_id if work_package.assigned_to.is_a?(User)
+
+    if defined?(ResolutionAgent::Setting) && ResolutionAgent::Setting.table_exists?
+      recipient_ids.concat(ResolutionAgent::Setting.instance.notification_recipient_ids)
+    end
+
+    User.not_locked.where(type: "User", id: recipient_ids.compact.uniq)
   end
 
   def self.project(journal)

@@ -17,8 +17,7 @@ module ResolutionAgent
       return "collecting" if latest.nil?
 
       case latest.outcome
-      when "supervisor_close" then "closed"
-      when "test_passed" then "awaiting_close"
+      when "supervisor_close", "test_passed" then "closed"
       when "test_failed" then "testing_failed"
       when "fix_succeeded" then "in_testing"
       when "pe_resolved", "pe_unresolved", "fix_failed" then "with_rd"
@@ -40,8 +39,6 @@ module ResolutionAgent
         %w[test_passed test_failed]
       when "testing_failed"
         %w[test_passed test_failed] + code_actions
-      when "awaiting_close"
-        %w[supervisor_close]
       else
         []
       end
@@ -52,7 +49,7 @@ module ResolutionAgent
     end
 
     def latest_test_passed?
-      name == "awaiting_close"
+      name == "closed" && stage_runs.last&.outcome == "test_passed"
     end
 
     def assignee_before_fix_id

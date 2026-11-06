@@ -19,23 +19,6 @@
         <label class="option-label">
           <input type="radio"
             [(ngModel)]="displayMode"
-            value="hierarchy"
-            name="display_mode_switch">
-          <svg op-hierarchy-icon size="small"[attr.icon-title]="text.display_mode.hierarchy"></svg>
-          <span [textContent]="text.display_mode.hierarchy"></span>
-          @if (displayMode === 'hierarchy') {
-            <span
-              class="form--inline-instructions"
-            [textContent]="text.display_mode.hierarchy_hint"></span>
-          }
-        </label>
-      </div>
-    </div>
-    <div class="form--field -full-width">
-      <div class="form--field-container">
-        <label class="option-label">
-          <input type="radio"
-            [(ngModel)]="displayMode"
             value="grouped"
             name="display_mode_switch">
           <svg op-group-icon size="small" [attr.icon-title]="text.label_group_by"></svg>

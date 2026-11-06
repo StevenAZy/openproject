@@ -30,34 +30,21 @@ import { from } from 'rxjs';
 import { WorkPackageResource } from 'core-app/features/hal/resources/work-package-resource';
 import { WpTabDefinition } from 'core-app/features/work-packages/components/wp-tabs/components/wp-tab-wrapper/tab';
 import {
-  WorkPackageRelationsTabComponent,
-} from 'core-app/features/work-packages/components/wp-single-view-tabs/relations-tab/relations-tab.component';
-import {
   WorkPackageOverviewTabComponent,
 } from 'core-app/features/work-packages/components/wp-single-view-tabs/overview-tab/overview-tab.component';
 import {
   WorkPackageActivityTabComponent,
 } from 'core-app/features/work-packages/components/wp-single-view-tabs/activity-panel/activity-tab.component';
 import {
-  WorkPackageWatchersTabComponent,
-} from 'core-app/features/work-packages/components/wp-single-view-tabs/watchers-tab/watchers-tab.component';
-import {
   WorkPackageFilesTabComponent,
 } from 'core-app/features/work-packages/components/wp-single-view-tabs/files-tab/op-files-tab.component';
 import { I18nService } from 'core-app/core/i18n/i18n.service';
-import {
-  workPackageWatchersCount,
-} from 'core-app/features/work-packages/components/wp-tabs/services/wp-tabs/wp-watchers-count.function';
-import {
-  workPackageRelationsCount,
-} from 'core-app/features/work-packages/components/wp-tabs/services/wp-tabs/wp-relations-count.function';
 import {
   workPackageNotificationsCount,
 } from 'core-app/features/work-packages/components/wp-tabs/services/wp-tabs/wp-notifications-count.function';
 import {
   workPackageFilesCount,
 } from 'core-app/features/work-packages/components/wp-tabs/services/wp-tabs/wp-files-count.function';
-import { WorkPackageProjectAttributesTabComponent } from 'core-app/features/work-packages/components/wp-single-view-tabs/project-attributes-tab/op-project-attributes-tab.component';
 
 @Injectable({
   providedIn: 'root',
@@ -149,29 +136,10 @@ export class WorkPackageTabsService {
         showCountAsBubble: true,
       },
       {
-        id: 'project_attributes',
-        component: WorkPackageProjectAttributesTabComponent,
-        name: I18n.t('js.work_packages.tabs.project_attributes'),
-        displayable: (workPackage) => !!workPackage.hasProjectAttributes,
-      },
-      {
         id: 'files',
         component: WorkPackageFilesTabComponent,
         name: I18n.t('js.work_packages.tabs.files'),
         count: workPackageFilesCount,
-      },
-      {
-        id: 'relations',
-        component: WorkPackageRelationsTabComponent,
-        name: I18n.t('js.work_packages.tabs.relations'),
-        count: workPackageRelationsCount,
-      },
-      {
-        id: 'watchers',
-        component: WorkPackageWatchersTabComponent,
-        name: I18n.t('js.work_packages.tabs.watchers'),
-        displayable: (workPackage) => !!workPackage.watchers,
-        count: workPackageWatchersCount,
       },
     ];
   }

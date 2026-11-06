@@ -3,6 +3,7 @@
 module ResolutionAgent
   class ReplyRecorder
     Result = Data.define(:success?, :error, :journal_id)
+    SUMMARY_MARKER = "\n\n---\nAgent 当前摘要\n".freeze
 
     def initialize(work_package:, agent:, body:)
       @work_package = work_package
@@ -41,7 +42,10 @@ module ResolutionAgent
     end
 
     def appended_description(work_package)
-      [work_package.description.to_s.rstrip.presence, @body].compact.join("\n\n")
+      original = work_package.description.to_s.split(SUMMARY_MARKER, 2).first.rstrip
+      return "---\nAgent 当前摘要\n#{@body}" if original.blank?
+
+      "#{original}#{SUMMARY_MARKER}#{@body}"
     end
 
     def failure(error)

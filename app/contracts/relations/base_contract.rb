@@ -40,12 +40,17 @@ module Relations
     validate :validate_user_allowed
     validate :validate_nodes_relatable
     validate :validate_accepted_type
+    validate :relations_are_not_supported
 
     def self.model
       Relation
     end
 
     private
+
+    def relations_are_not_supported
+      errors.add :base, :error_readonly
+    end
 
     def validate_from_exists
       errors.add :from_id, :error_not_found unless visible_work_packages.exists? model.from_id

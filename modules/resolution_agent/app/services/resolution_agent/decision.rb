@@ -8,8 +8,7 @@ module ResolutionAgent
       "fix_succeeded" => %w[修复有效],
       "fix_failed" => %w[修复失败],
       "test_passed" => %w[测试通过],
-      "test_failed" => %w[测试未通过],
-      "supervisor_close" => %w[确认完成]
+      "test_failed" => %w[测试未通过]
     }.freeze
 
     def self.phrase(text)
@@ -41,7 +40,6 @@ module ResolutionAgent
       return notice(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless @access.allowed_decision?(@action)
 
       stage = Stage.new(conversation.runs.to_a)
-      return close_without_test(conversation) if @action == "supervisor_close" && !stage.latest_test_passed?
       return notice(conversation, I18n.t("resolution_agent.errors.not_allowed")) unless stage.action_allowed?(@action)
       return notice(conversation, I18n.t("resolution_agent.errors.missing_agent")) if @setting.service_account.blank?
 
@@ -93,9 +91,9 @@ module ResolutionAgent
     def attributes_for(conversation, summary)
       attributes = {}
       status = @setting.status_for(@action)
-      if %w[pe_resolved pe_unresolved fix_succeeded supervisor_close].include?(@action)
+      if %w[pe_resolved pe_unresolved fix_succeeded test_passed test_failed].include?(@action)
         if status.blank?
-          return notice(conversation, I18n.t("resolution_agent.errors.missing_status", status: Setting::BUILTIN_STATUSES[@action]))
+          return notice(conversation, I18n.t("resolution_agent.errors.missing_status", status: @setting.status_label_for(@action)))
         end
 
         attributes[:status_id] = status.id
@@ -164,10 +162,6 @@ module ResolutionAgent
 
     def latest_pull_request(conversation)
       conversation.runs.where.not(pull_request_url: nil).order(:id).last&.pull_request_url
-    end
-
-    def close_without_test(conversation)
-      notice(conversation, I18n.t("resolution_agent.errors.close_without_test"))
     end
 
     def notice(conversation, body)

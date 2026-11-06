@@ -38,14 +38,11 @@ RSpec.describe ResolutionAgent::Access do
   it "keeps outcome actions with the person who owns them" do
     author = access_for(1)
     assignee = access_for(2)
-    supervisor = access_for(9)
-
     expect(author.allowed_decision?("pe_resolved")).to be true
     expect(author.allowed_decision?("test_passed")).to be true
     expect(assignee.allowed_decision?("pe_resolved")).to be false
     expect(assignee.allowed_decision?("fix_succeeded")).to be true
     expect(assignee.allowed_decision?("fix_failed")).to be true
-    expect(supervisor.allowed_decision?("supervisor_close")).to be true
     expect(author.allowed_decision?("supervisor_close")).to be false
   end
 end

@@ -58,6 +58,15 @@ module OpenProject::ResolutionAgent
       Rails.application.config.filter_parameters << :gitea_token
       Rails.application.config.filter_parameters << :llm_api_key
     end
+
+    config.to_prepare do
+      require "open_project/resolution_agent/product/menu_manager_patch"
+
+      patch = OpenProject::ResolutionAgent::Product::MenuManagerPatch
+      Redmine::MenuManager.singleton_class.prepend(patch) unless Redmine::MenuManager.singleton_class < patch
+
+      ApplicationController.include(ResolutionAgent::ProductGuard) unless ApplicationController < ResolutionAgent::ProductGuard
+    end
   end
 end
 

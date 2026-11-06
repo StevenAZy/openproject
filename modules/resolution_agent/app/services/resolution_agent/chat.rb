@@ -31,12 +31,13 @@ module ResolutionAgent
       new(...).call
     end
 
-    def initialize(user:, work_package:, body:, gitea_url: nil, branch: nil)
+    def initialize(user:, work_package:, body:, gitea_url: nil, branch: nil, repository_id: nil)
       @user = user
       @work_package = work_package
       @body = body.to_s.strip
       @gitea_url = gitea_url.presence
       @branch = branch.presence
+      @repository_id = repository_id
       @setting = Setting.instance
     end
 
@@ -80,7 +81,8 @@ module ResolutionAgent
         token:,
         body: @body,
         gitea_url: @gitea_url,
-        branch: @branch
+        branch: @branch,
+        repository_id: @repository_id
       }
     end
 
@@ -208,41 +210,53 @@ module ResolutionAgent
     def apply_code_fix(conversation, fields)
       return fields unless @code_request
 
-      assignee_before = @work_package.assigned_to_id
-      result = Gitea::CodeFix.new(
+      repository = ProjectRepository.active.find_by!(id: @repository_id, project: @work_package.project)
+      result = Gitea::Proposal.new(
         setting: @setting,
         repository_url: @gitea_url,
         branch: @branch,
-        work_package: @work_package,
         changes: fields[:file_changes]
       ).call
-      if result[:ok]
-        fields[:answer] = [
-          fields[:answer],
-          I18n.t("resolution_agent.prompt.repository", repository: result[:repository]),
-          I18n.t("resolution_agent.prompt.fix_branch", branch: result[:fix_branch]),
-          I18n.t("resolution_agent.prompt.pull_request", url: result[:pull_request_url])
-        ].compact.join("\n")
-        conversation.runs.create!(
-          outcome: "gitea_attempt",
-          gitea_repository: result[:repository],
-          source_branch: result[:source_branch],
-          fix_branch: result[:fix_branch],
-          pull_request_url: result[:pull_request_url],
-          assignee_before_fix_id: assignee_before
-        )
-      else
-        fields[:answer] = [
-          fields[:answer],
-          I18n.t("resolution_agent.prompt.code_failed", error: result[:error])
-        ].compact.join("\n")
-        conversation.runs.create!(
-          outcome: "gitea_failed",
-          gitea_repository: @gitea_url,
-          source_branch: @branch,
-          assignee_before_fix_id: assignee_before
-        )
-      end
+      attempt = FixAttempt.create!(
+        work_package: @work_package,
+        conversation:,
+        project_repository: repository,
+        actor: @user,
+        attempt_uuid: SecureRandom.uuid,
+        source_branch: @branch,
+        source_commit_sha: result[:source_commit_sha],
+        changes: result[:changes],
+        diff_summary: result[:diff_summary]
+      )
+      AuditEvent.create!(
+        actor: @user,
+        project: @work_package.project,
+        work_package: @work_package,
+        project_repository: repository,
+        fix_attempt: attempt,
+        action: "proposal.generated",
+        result: "success",
+        metadata: { source_branch: @branch, files: result.dig(:diff_summary, :files).length }
+      )
+      fields[:answer] = [
+        fields[:answer],
+        I18n.t("resolution_agent.prompt.proposal_ready", files: result.dig(:diff_summary, :files).length)
+      ].compact.join("\n")
+      conversation.runs.create!(
+        outcome: "gitea_proposal",
+        gitea_repository: @gitea_url,
+        source_branch: @branch,
+        assignee_before_fix_id: @work_package.assigned_to_id
+      )
+      fields
+    rescue ActiveRecord::RecordNotFound
+      fields[:answer] = [fields[:answer], I18n.t("resolution_agent.gitea.unmapped_repository")].compact.join("\n")
+      fields
+    rescue Gitea::Error => e
+      fields[:answer] = [
+        fields[:answer],
+        I18n.t("resolution_agent.prompt.code_failed", error: e.message)
+      ].compact.join("\n")
       fields
     end
 

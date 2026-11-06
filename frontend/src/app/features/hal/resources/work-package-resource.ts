@@ -59,7 +59,6 @@ export interface WorkPackageResourceEmbedded {
   attachments:AttachmentCollectionResource;
   fileLinks?:CollectionResource;
   author:HalResource;
-  availableWatchers:HalResource;
   category:HalResource|null;
   children:WorkPackageResource[];
   parent:WorkPackageResource|null;
@@ -72,7 +71,6 @@ export interface WorkPackageResourceEmbedded {
   timeEntries:HalResource[];
   type:TypeResource;
   version:HalResource|null;
-  watchers:CollectionResource;
   // For regular work packages
   startDate:string;
   dueDate:string;
@@ -87,18 +85,14 @@ export interface WorkPackageResourceLinks {
   addChild:CallableHalLink;
   addComment:CallableHalLink;
   addRelation:CallableHalLink<RelationResource>;
-  addWatcher:CallableHalLink;
   changeParent:CallableHalLink<WorkPackageResource>;
   copy:CallableHalLink<WorkPackageResource>;
   delete:CallableHalLink;
   logTime:CallableHalLink;
   startTimer:CallableHalLink;
   move:CallableHalLink;
-  removeWatcher:CallableHalLink;
   update:CallableHalLink<FormResource<WorkPackageResource>>;
   updateImmediately:CallableHalLink<WorkPackageResource>;
-  watch:CallableHalLink;
-  unwatch:CallableHalLink;
 }
 
 export interface WorkPackageLinksObject extends HalResourceLinks, WorkPackageResourceLinks {

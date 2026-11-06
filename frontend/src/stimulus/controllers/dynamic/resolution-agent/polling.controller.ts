@@ -47,7 +47,7 @@ export default class PollingController extends Controller<HTMLElement> {
   typingInterval?:ReturnType<typeof setInterval>;
 
   connect() {
-    requestAnimationFrame(() => this.scrollToLatest());
+    requestAnimationFrame(() => this.restoreScroll());
   }
 
   pollTargetConnected(element:HTMLElement) {
@@ -87,9 +87,10 @@ export default class PollingController extends Controller<HTMLElement> {
     element.textContent = '';
     element.setAttribute('aria-live', 'polite');
     this.typingInterval = setInterval(() => {
+      const shouldScroll = this.isNearLatest();
       offset = Math.min(text.length, offset + chunkSize);
       element.textContent = text.slice(0, offset);
-      this.scrollToLatest();
+      if (shouldScroll) { this.scrollToLatest(true); }
       if (offset === text.length) {
         this.stopTyping();
         element.innerHTML = finalHtml;
@@ -103,7 +104,15 @@ export default class PollingController extends Controller<HTMLElement> {
     }
   }
 
+  composerKeydown(event:KeyboardEvent) {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) { return; }
+
+    event.preventDefault();
+    (event.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
+  }
+
   disconnect() {
+    this.storeScroll();
     this.stopPolling();
     this.stopElapsed();
     this.stopTyping();
@@ -147,9 +156,37 @@ export default class PollingController extends Controller<HTMLElement> {
     this.elapsedTarget.textContent = template.replace('__SECONDS__', seconds.toString());
   }
 
-  private scrollToLatest() {
-    if (this.hasTranscriptTarget) {
+  private scrollToLatest(force = false) {
+    if (this.hasTranscriptTarget && (force || this.isNearLatest())) {
       this.transcriptTarget.scrollTop = this.transcriptTarget.scrollHeight;
+    }
+  }
+
+  private isNearLatest():boolean {
+    if (!this.hasTranscriptTarget) { return false; }
+
+    const transcript = this.transcriptTarget;
+    return transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 80;
+  }
+
+  private storeScroll() {
+    const key = this.element.dataset.scrollKey;
+    if (!key || !this.hasTranscriptTarget) { return; }
+
+    if (this.isNearLatest()) {
+      sessionStorage.removeItem(key);
+    } else {
+      sessionStorage.setItem(key, this.transcriptTarget.scrollTop.toString());
+    }
+  }
+
+  private restoreScroll() {
+    const key = this.element.dataset.scrollKey;
+    const stored = key && sessionStorage.getItem(key);
+    if (stored && this.hasTranscriptTarget) {
+      this.transcriptTarget.scrollTop = Number(stored);
+    } else {
+      this.scrollToLatest(true);
     }
   }
 

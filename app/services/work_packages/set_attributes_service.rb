@@ -211,7 +211,6 @@ class WorkPackages::SetAttributesService < BaseServices::SetAttributes
     set_default_priority
     set_default_author
     set_default_status
-    set_default_start_date(attributes)
     set_default_due_date(attributes)
   end
 
@@ -224,7 +223,10 @@ class WorkPackages::SetAttributesService < BaseServices::SetAttributes
   end
 
   def set_default_status
-    work_package.status ||= Status.default
+    configured_status = if defined?(ResolutionAgent::Setting) && ResolutionAgent::Setting.table_exists?
+                          Status.find_by(id: ResolutionAgent::Setting.instance.status_waiting_rd_id)
+                        end
+    work_package.status ||= configured_status || Status.default
   end
 
   def set_default_priority

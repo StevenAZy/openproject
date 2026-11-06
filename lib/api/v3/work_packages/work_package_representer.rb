@@ -189,102 +189,6 @@ module API
           }
         end
 
-        link :availableWatchers,
-             cache_if: -> { current_user.allowed_in_project?(:add_work_package_watchers, represented.project) } do
-          {
-            href: api_v3_paths.available_watchers(represented.id)
-          }
-        end
-
-        link :relations do
-          {
-            href: api_v3_paths.work_package_relations(represented.id)
-          }
-        end
-
-        link :revisions,
-             cache_if: -> { current_user.allowed_in_project?(:view_changesets, represented.project) } do
-          {
-            href: api_v3_paths.work_package_revisions(represented.id)
-          }
-        end
-
-        link :watch,
-             uncacheable: true do
-          next if current_user.anonymous? || current_user_watcher?
-
-          {
-            href: api_v3_paths.work_package_watchers(represented.id),
-            method: :post,
-            payload: { user: { href: api_v3_paths.user(current_user.id) } }
-          }
-        end
-
-        link :unwatch,
-             uncacheable: true do
-          next unless current_user_watcher?
-
-          {
-            href: api_v3_paths.watcher(current_user.id, represented.id),
-            method: :delete
-          }
-        end
-
-        link :watchers,
-             cache_if: -> { current_user.allowed_in_project?(:view_work_package_watchers, represented.project) } do
-          {
-            href: api_v3_paths.work_package_watchers(represented.id)
-          }
-        end
-
-        link :addWatcher,
-             cache_if: -> { current_user.allowed_in_project?(:add_work_package_watchers, represented.project) } do
-          {
-            href: api_v3_paths.work_package_watchers(represented.id),
-            method: :post,
-            payload: { user: { href: api_v3_paths.user("{user_id}") } },
-            templated: true
-          }
-        end
-
-        link :removeWatcher,
-             cache_if: -> { current_user.allowed_in_project?(:delete_work_package_watchers, represented.project) } do
-          {
-            href: api_v3_paths.watcher("{user_id}", represented.id),
-            method: :delete,
-            templated: true
-          }
-        end
-
-        link :addRelation,
-             cache_if: -> { current_user.allowed_in_work_package?(:manage_work_package_relations, represented) } do
-          {
-            href: api_v3_paths.work_package_relations(represented.id),
-            method: :post,
-            title: "Add relation"
-          }
-        end
-
-        link :addChild,
-             cache_if: -> { add_work_packages_allowed? } do
-          next if represented.milestone? || represented.new_record? || represented.project.nil?
-
-          {
-            href: api_v3_paths.work_packages_by_workspace(represented.project.identifier),
-            method: :post,
-            title: "Add child of #{represented.subject}"
-          }
-        end
-
-        link :changeParent,
-             cache_if: -> { current_user.allowed_in_project?(:manage_subtasks, represented.project) } do
-          {
-            href: api_v3_paths.work_package(represented.id),
-            method: :patch,
-            title: "Change parent of #{represented.subject}"
-          }
-        end
-
         link :addComment,
              cache_if: -> { current_user.allowed_in_work_package?(:add_work_package_comments, represented) } do
           {
@@ -299,30 +203,6 @@ module API
             href: api_v3_paths.render_markup(link: api_v3_paths.work_package(represented.id)),
             method: :post
           }
-        end
-
-        links :children,
-              uncacheable: true do
-          next if visible_children.empty?
-
-          visible_children.map do |child|
-            {
-              href: api_v3_paths.work_package(child.id),
-              title: child.subject,
-              displayId: child.display_id.to_s
-            }
-          end
-        end
-
-        links :ancestors,
-              uncacheable: true do
-          represented.visible_ancestors(current_user).map do |ancestor|
-            {
-              href: api_v3_paths.work_package(ancestor.id),
-              title: ancestor.subject,
-              displayId: ancestor.display_id.to_s
-            }
-          end
         end
 
         property :id,
@@ -662,45 +542,6 @@ module API
                                names = without_href.filter_map { |link| link["title"].presence if link["title"].is_a?(String) }
                                represented.label_names = names if names.any?
                              end
-
-        associated_resource :parent,
-                            v3_path: :work_package,
-                            representer: ::API::V3::WorkPackages::WorkPackageRepresenter,
-                            skip_render: ->(*) { represented.parent && !represented.parent.visible? },
-                            link_title_attribute: :subject,
-                            uncacheable_link: true,
-                            link: ->(*) {
-                              if represented.parent&.visible?
-                                {
-                                  href: api_v3_paths.work_package(represented.parent.id),
-                                  title: represented.parent.subject,
-                                  displayId: represented.parent.display_id.to_s
-                                }
-                              else
-                                {
-                                  href: nil
-                                }
-                              end
-                            },
-                            setter: ->(fragment:, **) do
-                              next if fragment.empty?
-
-                              href = fragment["href"]
-
-                              new_parent =
-                                if href
-                                  id = ::API::Utilities::ResourceLinkParser
-                                    .parse_id href,
-                                              property: "parent",
-                                              expected_version: "3",
-                                              expected_namespace: "work_packages"
-
-                                  WorkPackage.visible.find_by(id:) ||
-                                    ::WorkPackage::InexistentWorkPackage.new(id:)
-                                end
-
-                              represented.parent = new_parent
-                            end
 
         resources :customActions,
                   uncacheable_link: true,

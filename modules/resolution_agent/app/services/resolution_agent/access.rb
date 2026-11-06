@@ -27,7 +27,6 @@ module ResolutionAgent
       case action.to_s
       when "pe_resolved", "pe_unresolved", "test_passed", "test_failed" then author?
       when "fix_succeeded", "fix_failed" then assignee?
-      when "supervisor_close" then supervisor?
       else false
       end
     end

@@ -20,7 +20,9 @@
     .resolution-agent details summary { cursor: pointer; }
   </style>
 
-  <div class="resolution-agent" data-controller="resolution-agent--polling">
+  <div class="resolution-agent"
+       data-controller="resolution-agent--polling"
+       data-scroll-key="resolution-agent-scroll-<%= @work_package.id %>">
     <% if flash[:error].present? %>
       <%= render(Primer::Alpha::Banner.new(scheme: :danger, icon: :alert, mb: 2)) { flash[:error] } %>
     <% end %>
@@ -109,6 +111,11 @@
                         )
                       ) { t("resolution_agent.waiting_time", seconds: generation_elapsed) } %>
                 </div>
+                <%= button_to t("resolution_agent.cancel_generation"),
+                              cancel_project_work_package_resolution_agent_path(@project, @work_package),
+                              method: :post,
+                              class: "button",
+                              form: { data: { turbo_frame: "resolution-agent-tab-content" } } %>
               </div>
             <% end %>
           </div>
@@ -150,6 +157,39 @@
         </div>
       <% end %>
 
+      <% @fix_attempts.each do |attempt| %>
+        <%= render(Primer::Box.new(border: true, border_radius: 2, p: 3, mb: 2)) do %>
+          <%= render(Primer::Beta::Text.new(tag: :h3, font_weight: :bold, mb: 2)) do %>
+            <%= t("resolution_agent.fix_attempt.title", id: attempt.id) %>
+          <% end %>
+          <%= render(Primer::Beta::Text.new(tag: :p, color: :muted, mb: 2)) do %>
+            <%= attempt.project_repository.display_name %> · <%= attempt.source_branch %> ·
+            <%= t("resolution_agent.fix_attempt.statuses.#{attempt.status}") %>
+          <% end %>
+          <ul>
+            <% Array(attempt.diff_summary["files"]).each do |file| %>
+              <li>
+                <code><%= file["path"] %></code>
+                (<%= file["old_lines"] %> → <%= file["new_lines"] %> lines)
+              </li>
+            <% end %>
+          </ul>
+          <% if attempt.status == "awaiting_confirmation" && @access.assignee? %>
+            <%= button_to t("resolution_agent.fix_attempt.confirm"),
+                          confirm_fix_attempt_project_work_package_resolution_agent_path(
+                            @project,
+                            @work_package,
+                            attempt_id: attempt.id
+                          ),
+                          method: :post,
+                          class: "button -primary",
+                          form: { data: { turbo_confirm: t("resolution_agent.fix_attempt.confirm_prompt") } } %>
+          <% elsif attempt.pull_request_url.present? %>
+            <%= link_to "Pull Request", attempt.pull_request_url, target: "_blank", rel: "noopener" %>
+          <% end %>
+        <% end %>
+      <% end %>
+
       <% if show_composer? %>
         <div class="resolution-agent__composer">
           <%= form_with url: message_project_work_package_resolution_agent_path(@project, @work_package),
@@ -163,17 +203,30 @@
                                required: !generating?,
                                rows: 4,
                                disabled: generating?,
-                               placeholder: t("resolution_agent.message_placeholder") %>
+                               placeholder: t("resolution_agent.message_placeholder"),
+                               data: { action: "keydown->resolution-agent--polling#composerKeydown" } %>
             <% if show_code_fields? %>
-              <details>
+              <details data-controller="resolution-agent--repository-branches"
+                       data-resolution-agent--repository-branches-url-value="<%= branches_project_work_package_resolution_agent_path(@project, @work_package) %>">
                 <summary><%= t("resolution_agent.code_fix") %></summary>
                 <p>
-                  <%= form.label :gitea_url, t("resolution_agent.gitea_url") %>
-                  <%= form.text_field :gitea_url, disabled: generating? %>
+                  <%= form.label :repository_id, t("resolution_agent.settings.repository") %>
+                  <%= form.select :repository_id,
+                                  @project_repositories.map { |repository| [repository.display_name, repository.id] },
+                                  { include_blank: true },
+                                  disabled: generating?,
+                                  data: {
+                                    resolution_agent__repository_branches_target: "repository",
+                                    action: "change->resolution-agent--repository-branches#load"
+                                  } %>
                 </p>
                 <p>
                   <%= form.label :branch, t("resolution_agent.branch") %>
-                  <%= form.text_field :branch, disabled: generating? %>
+                  <%= form.select :branch,
+                                  [],
+                                  { include_blank: true },
+                                  disabled: generating?,
+                                  data: { resolution_agent__repository_branches_target: "branch" } %>
                 </p>
               </details>
             <% end %>

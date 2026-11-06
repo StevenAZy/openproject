@@ -1,0 +1,118 @@
+<section class="op-task-projects">
+  <div class="op-title-bar">
+    <h2 class="op-title-bar__title"><%= t("resolution_agent.projects.title") %></h2>
+    <% if can_create_project? %>
+      <%= link_to t("resolution_agent.projects.create"), new_project_path, class: "button -primary" %>
+    <% end %>
+  </div>
+
+  <%= form_with url: helpers.projects_path, method: :get do |form| %>
+    <div class="form--field-container">
+      <%= form.search_field :project_query,
+                            value: query,
+                            placeholder: t("resolution_agent.projects.search"),
+                            class: "form--text-field" %>
+      <%= form.submit t("resolution_agent.task_home.search_action"), class: "button" %>
+    </div>
+  <% end %>
+
+  <% if projects.empty? %>
+    <%= render(Primer::Beta::Blankslate.new) do |component| %>
+      <% component.with_heading(tag: :h3) { t("resolution_agent.projects.empty") } %>
+    <% end %>
+  <% else %>
+    <div class="generic-table--container">
+      <table class="generic-table">
+        <thead>
+          <tr>
+            <th><%= Project.human_attribute_name(:name) %></th>
+            <th><%= t("resolution_agent.projects.status") %></th>
+            <th><%= t("resolution_agent.projects.my_open_tasks") %></th>
+            <th><%= Project.human_attribute_name(:updated_at) %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% projects.each do |project| %>
+            <tr>
+              <td><%= link_to project.name, project_work_packages_path(project) %></td>
+              <td><%= t("resolution_agent.projects.active") %></td>
+              <td><%= task_count(project) %></td>
+              <td><%= helpers.format_time(project.updated_at) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% if total_pages > 1 %>
+    <nav class="pagination" aria-label="<%= t("resolution_agent.projects.pagination") %>">
+      <% if page > 1 %>
+        <%= link_to t("resolution_agent.task_home.previous"), page_path(page - 1), class: "button" %>
+      <% end %>
+      <span><%= t("resolution_agent.task_home.page", page:, pages: total_pages) %></span>
+      <% if page < total_pages %>
+        <%= link_to t("resolution_agent.task_home.next"), page_path(page + 1), class: "button" %>
+      <% end %>
+    </nav>
+  <% end %>
+</section>
+<section class="op-task-projects">
+  <div class="op-title-bar">
+    <h2 class="op-title-bar__title"><%= t("resolution_agent.projects.title") %></h2>
+    <% if helpers.allowed_to_create_project? %>
+      <%= link_to t("resolution_agent.projects.create"), new_project_path, class: "button -primary" %>
+    <% end %>
+  </div>
+
+  <%= form_with url: helpers.projects_path, method: :get do |form| %>
+    <div class="form--field-container">
+      <%= form.search_field :project_query,
+                            value: query,
+                            placeholder: t("resolution_agent.projects.search"),
+                            class: "form--text-field" %>
+      <%= form.submit t("resolution_agent.task_home.search_action"), class: "button" %>
+    </div>
+  <% end %>
+
+  <% if projects.empty? %>
+    <%= render(Primer::Beta::Blankslate.new) do |component| %>
+      <% component.with_heading(tag: :h3) { t("resolution_agent.projects.empty") } %>
+    <% end %>
+  <% else %>
+    <div class="generic-table--container">
+      <table class="generic-table">
+        <thead>
+          <tr>
+            <th><%= Project.human_attribute_name(:name) %></th>
+            <th><%= t("resolution_agent.projects.status") %></th>
+            <th><%= t("resolution_agent.projects.my_open_tasks") %></th>
+            <th><%= Project.human_attribute_name(:updated_at) %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% projects.each do |project| %>
+            <tr>
+              <td><%= link_to project.name, project_work_packages_path(project) %></td>
+              <td><%= t("resolution_agent.projects.active") %></td>
+              <td><%= task_count(project) %></td>
+              <td><%= helpers.format_time(project.updated_at) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% if total_pages > 1 %>
+    <nav class="pagination" aria-label="<%= t("resolution_agent.projects.pagination") %>">
+      <% if page > 1 %>
+        <%= link_to t("resolution_agent.task_home.previous"), page_path(page - 1), class: "button" %>
+      <% end %>
+      <span><%= t("resolution_agent.task_home.page", page:, pages: total_pages) %></span>
+      <% if page < total_pages %>
+        <%= link_to t("resolution_agent.task_home.next"), page_path(page + 1), class: "button" %>
+      <% end %>
+    </nav>
+  <% end %>
+</section>

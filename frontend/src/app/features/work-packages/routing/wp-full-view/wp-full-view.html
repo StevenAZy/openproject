@@ -14,28 +14,6 @@
           <li class="toolbar-item hidden-for-tablet">
             <wp-create-button [fullView]="true" />
           </li>
-          @if (displayShareButton$ | async) {
-            <li class="toolbar-item"
-              >
-              <wp-share-button [workPackage]="workPackage" />
-            </li>
-          }
-          @if (displayTimerButton) {
-            <li class="toolbar-item hidden-for-tablet">
-              <op-wp-timer-button [workPackage]="workPackage"
-                 />
-            </li>
-          }
-          @if (displayWatchButton) {
-            <li class="toolbar-item">
-              <wp-watcher-button [workPackage]="workPackage" />
-            </li>
-          }
-          @if (displayReminderButton$ | async) {
-            <li class="toolbar-item">
-              <wp-reminder-button [workPackage]="workPackage" />
-            </li>
-          }
           @if ((displayNotificationsButton$ | async)) {
             <li class="toolbar-item">
               <op-work-package-mark-notification-button [workPackage]="workPackage"

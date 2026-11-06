@@ -26,18 +26,12 @@
 //++
 
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
-import { CurrentUserService } from 'core-app/core/current-user/current-user.service';
 import { TabDefinition } from 'core-app/shared/components/tabs/tab.interface';
 import { RecentItemsService } from 'core-app/core/recent-items.service';
-import { ProjectResource } from 'core-app/features/hal/resources/project-resource';
-import { HalResource } from 'core-app/features/hal/resources/hal-resource';
-import { WorkPackageResource } from 'core-app/features/hal/resources/work-package-resource';
 import { HalResourceNotificationService } from 'core-app/features/hal/services/hal-resource-notification.service';
 import { WpSingleViewService } from 'core-app/features/work-packages/routing/wp-view-base/state/wp-single-view.service';
 import { WorkPackageSingleViewBase } from 'core-app/features/work-packages/routing/wp-view-base/work-package-single-view.base';
 import { WorkPackageNotificationService } from 'core-app/features/work-packages/services/notifications/work-package-notification.service';
-import { Observable, of } from 'rxjs';
-import { BannersService } from 'core-app/core/enterprise/banners.service';
 
 @Component({
   templateUrl: './wp-full-view.html',
@@ -53,22 +47,7 @@ import { BannersService } from 'core-app/core/enterprise/banners.service';
 })
 export class WorkPackagesFullViewComponent extends WorkPackageSingleViewBase implements OnInit {
   recentItemsService = inject(RecentItemsService);
-  readonly currentUserService = inject(CurrentUserService);
   readonly cdRef = inject(ChangeDetectorRef);
-  readonly banners = inject(BannersService);
-
-  // Watcher properties
-  public isWatched:boolean;
-
-  public displayReminderButton$:Observable<boolean> = of(false);
-
-  public displayShareButton$:false|Observable<boolean> = false;
-
-  public displayTimerButton = false;
-
-  public displayWatchButton = false;
-
-  public watchers:HalResource[];
 
   public text = {
     fullView: {
@@ -101,26 +80,6 @@ export class WorkPackagesFullViewComponent extends WorkPackageSingleViewBase imp
 
       // Set Focused WP
       this.wpTableFocus.initializeSelectionAndFocus(this.workPackage.id);
-    }
-
-    this.setWorkPackageScopeProperties(this.workPackage);
-  }
-
-  private setWorkPackageScopeProperties(wp:WorkPackageResource) {
-    this.isWatched = Object.prototype.hasOwnProperty.call(wp, 'unwatch');
-    this.displayWatchButton = Object.prototype.hasOwnProperty.call(wp, 'unwatch') || Object.prototype.hasOwnProperty.call(wp, 'watch');
-    this.displayTimerButton = Object.prototype.hasOwnProperty.call(wp, 'logTime');
-    this.displayShareButton$ = this.banners.allowsTo('work_package_sharing')
-      ? this.currentUserService.hasCapabilities$('work_package_shares/index', (wp.project as ProjectResource).id)
-      : of(false);
-    this.displayReminderButton$ = this.currentUserService.isLoggedInAndHasCapabalities$(
-      'work_packages/read',
-      (this.workPackage.project as ProjectResource).id,
-    );
-
-    // watchers
-    if (wp.watchers) {
-      this.watchers = wp.watchers.elements;
     }
   }
 }

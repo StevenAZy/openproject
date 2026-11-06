@@ -66,22 +66,16 @@ RSpec.describe ResolutionAgent::Stage do
     expect(failed.latest_test_passed?).to be false
   end
 
-  it "waits for the supervisor only when the latest test passed" do
-    waiting = stage(
+  it "closes after the PE confirms the latest test passed" do
+    closed = stage(
       [1, "fix_succeeded", nil, nil],
       [2, "test_failed", nil, nil],
       [3, "test_passed", nil, nil]
     )
 
-    expect(waiting.name).to eq("awaiting_close")
-    expect(waiting.allowed_actions).to eq(["supervisor_close"])
-  end
-
-  it "closes the conversation after the supervisor confirms" do
-    closed = stage([1, "supervisor_close", nil, nil])
-
     expect(closed.name).to eq("closed")
     expect(closed.allowed_actions).to eq([])
+    expect(closed.latest_test_passed?).to be true
   end
 
   it "returns to research and development after a failed fix" do

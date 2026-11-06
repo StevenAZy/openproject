@@ -2,7 +2,7 @@
 
 module ResolutionAgent
   class PanelsController < ApplicationController
-    authorization_checked! :show, :message, :decision, :status
+    authorization_checked! :show, :message, :decision, :status, :branches, :confirm, :cancel
 
     before_action :find_project_by_project_id
     before_action :find_work_package
@@ -33,14 +33,51 @@ module ResolutionAgent
     def message
       return redirect_to(panel_path, status: :see_other) if @denied
 
+      repository, branch = selected_repository_and_branch
+      return redirect_to(panel_path, status: :see_other) if flash[:error].present?
+
       result = Chat.call(
         user: current_user,
         work_package: @work_package,
         body: params[:body],
-        gitea_url: params[:gitea_url],
-        branch: params[:branch]
+        gitea_url: repository && repository_url(repository),
+        branch:,
+        repository_id: repository&.id
       )
       flash[:error] = result.error if result.error.present?
+      redirect_to panel_path, status: :see_other
+    end
+
+    def branches
+      return head :not_found if @denied
+
+      repository = ProjectRepository.active.find_by!(id: params[:repository_id], project: @project)
+      render json: Gitea::SiteClient.new.branches(repository.owner, repository.name)
+    rescue Gitea::ConnectionError => e
+      render json: { error: I18n.t("resolution_agent.gitea.connection_errors.#{e.kind}") }, status: :bad_gateway
+    end
+
+    def cancel
+      return redirect_to(panel_path, status: :see_other) if @denied
+
+      conversation = Conversation.find_by(work_package: @work_package)
+      conversation&.cancel_generation!
+      conversation&.messages&.create!(role: "notice", body: I18n.t("resolution_agent.generation_cancelled"))
+      redirect_to panel_path, status: :see_other
+    end
+
+    def confirm
+      return redirect_to(panel_path, status: :see_other) if @denied
+
+      attempt = FixAttempt.find_by!(
+        id: params[:attempt_id],
+        work_package: @work_package,
+        project_repository_id: ProjectRepository.where(project: @project).select(:id)
+      )
+      FixAttempts::Confirm.new(attempt:, user: current_user).call
+    rescue Gitea::Error, ActiveRecord::RecordInvalid => e
+      flash[:error] = e.message
+    ensure
       redirect_to panel_path, status: :see_other
     end
 
@@ -83,6 +120,8 @@ module ResolutionAgent
       @conversation&.recover_stale_generation!
       @messages = @conversation&.messages&.includes(:user)&.order(:id) || Message.none
       @stage = Stage.new(@conversation&.runs&.to_a || [])
+      @project_repositories = ProjectRepository.active.where(project: @project).order(:display_name)
+      @fix_attempts = FixAttempt.where(work_package: @work_package).order(id: :desc).limit(10)
       @runtime_ready = llm_ready?
       @candidates = candidates
       @polled_job_finished = action_name == "status" && !@conversation&.generating? && known_generation_job?
@@ -128,6 +167,27 @@ module ResolutionAgent
 
       ids = @conversation.pending_assignee_list.map(&:to_i)
       Principal.where(id: ids).index_by(&:id).values_at(*ids).compact
+    end
+
+    def selected_repository_and_branch
+      return [nil, nil] if params[:repository_id].blank?
+
+      repository = ProjectRepository.active.find_by!(id: params[:repository_id], project: @project)
+      branch = params[:branch].to_s
+      unless Gitea::SiteClient.new.branches(repository.owner, repository.name).include?(branch)
+        flash[:error] = I18n.t("resolution_agent.gitea.invalid_branch")
+      end
+      [repository, branch]
+    rescue ActiveRecord::RecordNotFound
+      flash[:error] = I18n.t("resolution_agent.gitea.unmapped_repository")
+      [nil, nil]
+    rescue Gitea::ConnectionError => e
+      flash[:error] = I18n.t("resolution_agent.gitea.connection_errors.#{e.kind}")
+      [nil, nil]
+    end
+
+    def repository_url(repository)
+      "#{@setting.gitea_base_url.to_s.sub(%r{/+\z}, '')}/#{repository.full_name}"
     end
   end
 end

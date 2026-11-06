@@ -67,6 +67,20 @@ module ResolutionAgent
       end
     end
 
+    def cancel_generation!
+      with_lock do
+        return false unless generating?
+
+        update!(
+          generating: false,
+          generation_token: nil,
+          generation_phase: nil,
+          generation_started_at: nil
+        )
+        true
+      end
+    end
+
     def generation_current?(token)
       generating? && generation_token == token
     end

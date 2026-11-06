@@ -10,10 +10,14 @@ module ResolutionAgent
         given = URI.parse(url.to_s)
         return unless given.scheme == base.scheme && given.host == base.host && given.port == base.port
 
-        parts = given.path.delete_suffix(".git").split("/").reject(&:blank?)
-        return if parts.length < 2
+        base_path = base.path.to_s.sub(%r{/+\z}, "")
+        return unless given.path == base_path || given.path.start_with?("#{base_path}/")
 
-        new(owner: parts[-2], name: parts[-1], base:)
+        relative_path = given.path.delete_prefix(base_path).delete_suffix(".git")
+        parts = relative_path.split("/").reject(&:blank?)
+        return unless parts.length == 2
+
+        new(owner: parts[0], name: parts[1], base:)
       rescue URI::InvalidURIError
         nil
       end
@@ -27,11 +31,15 @@ module ResolutionAgent
       end
 
       def api_base
-        "#{origin}/api/v1/repos/#{owner}/#{name}"
+        "#{site_base}/api/v1/repos/#{owner}/#{name}"
       end
 
       def web_base
-        "#{origin}/#{owner}/#{name}"
+        "#{site_base}/#{owner}/#{name}"
+      end
+
+      def site_base
+        "#{origin}#{base.path.to_s.sub(%r{/+\z}, '')}"
       end
 
       def origin

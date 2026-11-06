@@ -45,13 +45,13 @@ module WorkPackages
               }
     attribute :type_id
     attribute :priority_id
-    attribute :category_id
+    attribute :category_id, writable: false
     attribute :target_versions,
-              permission: :assign_versions do
+              writable: false do
       validate_target_versions_are_assignable
     end
     attribute :observed_in_versions,
-              permission: :assign_versions do
+              writable: false do
       validate_observed_in_versions_are_assignable
     end
 
@@ -62,9 +62,7 @@ module WorkPackages
     attribute :project_id
 
     attribute :done_ratio,
-              writable: ->(*) {
-                          WorkPackage.work_based_mode?
-                        } do
+              writable: false do
       next if invalid_work_or_remaining_work_values? # avoid too many error messages at the same time
 
       validate_percent_complete_matches_work_and_remaining_work
@@ -74,13 +72,13 @@ module WorkPackages
     attribute :derived_done_ratio,
               writable: false
 
-    attribute :estimated_hours do
+    attribute :estimated_hours, writable: false do
       validate_work_is_set_when_remaining_work_and_percent_complete_are_set
     end
     attribute :derived_estimated_hours,
               writable: false
 
-    attribute :remaining_hours do
+    attribute :remaining_hours, writable: false do
       validate_remaining_work_is_lower_than_work
       validate_remaining_work_is_zero_or_empty_when_percent_complete_is_100p
       validate_remaining_work_is_set_when_work_and_percent_complete_are_set
@@ -89,10 +87,12 @@ module WorkPackages
               writable: false
 
     attribute :parent_id,
-              permission: :manage_subtasks
+              writable: ->(*) {
+                !model.parent_id_changed?
+              }
 
     attribute :project_phase_definition_id,
-              permission: :view_project_phases do
+              writable: false do
       validate_phase_active_in_project
     end
     attribute_alias :project_phase_definition_id, :project_phase_id
@@ -105,7 +105,7 @@ module WorkPackages
                               assignable_assignees
     end
 
-    attribute :responsible_id do
+    attribute :responsible_id, writable: false do
       next unless model.project
 
       validate_people_visible :responsible,
@@ -113,16 +113,12 @@ module WorkPackages
                               assignable_responsibles
     end
 
-    attribute :schedule_manually
+    attribute :schedule_manually, writable: false
     attribute :ignore_non_working_days,
-              writable: ->(*) {
-                leaf_or_manually_scheduled?
-              }
+              writable: false
 
     attribute :start_date,
-              writable: ->(*) {
-                leaf_or_manually_scheduled?
-              } do
+              writable: false do
       validate_after_soonest_start(:start_date)
     end
 
@@ -133,11 +129,11 @@ module WorkPackages
       validate_after_soonest_start(:due_date)
     end
 
-    attribute :duration
+    attribute :duration, writable: false
 
-    attribute :budget
+    attribute :budget, writable: false
 
-    attribute :labels
+    attribute :labels, writable: false
 
     validates :subject,
               presence: true,

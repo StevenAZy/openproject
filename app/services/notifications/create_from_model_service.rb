@@ -199,7 +199,7 @@ class Notifications::CreateFromModelService
   def settings_of_commented
     return NotificationSetting.none unless journal.notes?
 
-    project_applicable_settings(User.all,
+    project_applicable_settings(strategy.event_users(model),
                                 project,
                                 NotificationSetting::WORK_PACKAGE_COMMENTED)
   end
@@ -207,7 +207,7 @@ class Notifications::CreateFromModelService
   def settings_of_created
     return NotificationSetting.none unless journal.initial?
 
-    project_applicable_settings(User.all,
+    project_applicable_settings(strategy.event_users(model),
                                 project,
                                 NotificationSetting::WORK_PACKAGE_CREATED)
   end
@@ -215,7 +215,7 @@ class Notifications::CreateFromModelService
   def settings_of_processed
     return NotificationSetting.none unless !journal.initial? && journal.details.has_key?(:status_id)
 
-    project_applicable_settings(User.all,
+    project_applicable_settings(strategy.event_users(model),
                                 project,
                                 NotificationSetting::WORK_PACKAGE_PROCESSED)
   end
@@ -223,7 +223,7 @@ class Notifications::CreateFromModelService
   def settings_of_prioritized
     return NotificationSetting.none unless !journal.initial? && journal.details.has_key?(:priority_id)
 
-    project_applicable_settings(User.all,
+    project_applicable_settings(strategy.event_users(model),
                                 project,
                                 NotificationSetting::WORK_PACKAGE_PRIORITIZED)
   end
@@ -233,7 +233,7 @@ class Notifications::CreateFromModelService
       return NotificationSetting.none
     end
 
-    project_applicable_settings(User.all,
+    project_applicable_settings(strategy.event_users(model),
                                 project,
                                 NotificationSetting::WORK_PACKAGE_SCHEDULED)
   end

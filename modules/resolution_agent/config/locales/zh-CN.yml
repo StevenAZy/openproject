@@ -1,5 +1,9 @@
 zh-CN:
+  label_work_package: "任务"
+  label_work_package_plural: "任务"
   js:
+    label_work_package: "任务"
+    label_work_package_plural: "任务"
     work_packages:
       tabs:
         resolution_agent: "代理"
@@ -9,9 +13,11 @@ zh-CN:
     you: "你"
     agent: "代理"
     send: "发送"
+    cancel_generation: "取消生成"
+    generation_cancelled: "已取消本次生成。"
     message_placeholder: "给代理发送消息"
     generating: "正在生成回复。"
-    denied: "只有这条工作包的创建人、当前负责人、配置的研发主管，或能查看它的管理员可以打开代理。"
+    denied: "只有这条任务的创建人、当前负责人、配置的研发主管，或能查看它的管理员可以打开代理。"
     gitea_url: "Gitea 仓库地址"
     branch: "分支"
     code_fix: "尝试修复代码"
@@ -19,16 +25,55 @@ zh-CN:
     generating_reply: "正在生成回复。"
     waiting_time: "已等待 %{seconds} 秒"
     waiting_time_template: "已等待 __SECONDS__ 秒"
+    task_home:
+      title: "我的任务"
+      all_tasks: "查看所有任务"
+      create: "创建任务"
+      search: "搜索任务标题"
+      search_action: "搜索"
+      pagination: "任务分页"
+      previous: "上一页"
+      next: "下一页"
+      page: "第 %{page} / %{pages} 页"
+      filters:
+        label: "任务快捷筛选"
+        all: "全部"
+        assigned: "指派给我"
+        authored: "我创建的"
+        processing: "处理中"
+        verification: "待我验证"
+      empty: "目前没有待处理任务"
+      empty_description: "这里会显示直接指派给你或由你创建的未关闭任务。"
+    projects:
+      title: "项目"
+      create: "创建项目"
+      search: "搜索项目"
+      empty: "没有可见的项目"
+      status: "状态"
+      active: "活动"
+      my_open_tasks: "我的未关闭任务"
+      pagination: "项目分页"
     generation_phases:
       queued: "正在排队"
-      analyzing: "正在分析工作包"
+      analyzing: "正在分析任务"
       reading_repository: "正在读取代码仓库"
       generating: "正在生成回复"
       creating_fix: "正在创建代码修复和 Pull Request"
     job:
       title: "生成代理回复"
-    settings_hint: "服务账号需要能查看和编辑工作包，并能添加评论。结果直接使用内置状态 Tested、In progress、In testing、Closed，工作流要允许这个账号做对应跳转。密钥留空则保留已保存的值。"
-    choose_assignee: "关联工作包的负责人不同，请选一个。"
+    fix_attempt:
+      title: "代码变更提案 #%{id}"
+      confirm: "确认并创建 Pull Request"
+      confirm_prompt: "确认后将创建独立修复分支并向 Gitea 写入这些变更。是否继续？"
+      statuses:
+        awaiting_confirmation: "等待 R&D 确认"
+        pushing: "正在创建分支"
+        pull_request_opened: "Pull Request 已创建"
+        failed: "创建失败"
+        merged: "已合并"
+        closed: "已关闭"
+    settings_hint: "服务账号需要能查看和编辑任务，并能添加评论。请配置流程状态并确保服务账号的工作流允许对应跳转。密钥留空则保留已保存的值。"
+    choose_assignee: "关联任务的负责人不同，请选一个。"
     empty:
       author: "写下现场现象。"
     stages:
@@ -56,8 +101,8 @@ zh-CN:
       pe_unresolved: "状态改为 In progress，描述改为总结并保留原始记录。"
       fix_succeeded: "状态改为 In testing，并写一条总结评论。"
       fix_failed: "状态不变，负责人交回这次修复前的人，并写一条总结评论。"
-      test_passed: "记录测试通过。状态不变，等待主管确认完成。"
-      test_failed: "记录测试未通过。状态保持 In testing。"
+      test_passed: "记录测试通过并关闭任务。"
+      test_failed: "记录测试未通过并退回 R&D 处理中。"
       supervisor_close: "状态改为 Closed，并写一条总结评论。"
     outcome:
       status_changed: "状态改为 %{status}"
@@ -69,6 +114,15 @@ zh-CN:
       service_account: "服务账号"
       supervisor: "R&D 主管"
       accounts: "服务账号与研发主管"
+      notifications: "站内通知"
+      notifications_hint: "任务创建者和当前执行者始终是候选接收人；这里可增加系统级接收人。操作者本人和无项目查看权限的用户不会收到通知。"
+      notification_recipients: "额外通知接收人"
+      workflow: "PE/R&D 工作流"
+      workflow_hint: "状态按 ID 保存，不依赖名称。请确保角色和服务账号允许执行：待研发 → R&D 处理中 → 待 PE 验证 → 已关闭，以及验证失败退回。"
+      status_waiting_rd: "待研发"
+      status_rd_working: "R&D 处理中"
+      status_pe_verification: "待 PE 验证"
+      status_closed: "已关闭"
       gitea: "Gitea"
       llm: "模型"
       llm_hint: "使用 OpenAI 兼容接口。本地模型填写它的地址，一般以 /v1 结尾。服务不需要密钥时留空。"
@@ -77,6 +131,19 @@ zh-CN:
       llm_api_key: "API 密钥"
       gitea_base_url: "Gitea 站点地址"
       gitea_token: "Gitea 令牌"
+      gitea_webhook_secret: "Webhook 密钥"
+      gitea_tls_mode: "TLS 验证"
+      gitea_custom_ca: "自定义 CA 证书（PEM）"
+      gitea_tls_modes:
+        system_ca: "系统 CA"
+        custom_ca: "系统 CA + 自定义 CA"
+      test_gitea_connection: "测试 Gitea 连接"
+      project_repositories: "Project 仓库映射"
+      repository_owner: "仓库所有者"
+      repository_name: "仓库名称"
+      repository_display_name: "显示名称"
+      repository_default_branch: "默认分支"
+      repository: "仓库"
     actions:
       pe_resolved: "已解决"
       pe_unresolved: "未解决"
@@ -86,25 +153,25 @@ zh-CN:
       test_failed: "测试未通过"
       supervisor_close: "确认完成"
     errors:
-      unavailable: "这条工作包上不能使用代理。"
+      unavailable: "这条任务上不能使用代理。"
       empty: "请先输入内容。"
       busy: "正在生成回复。"
       enqueue_failed: "回复任务未能加入队列，请重试。"
-      generation_failed: "没有生成回复。工作包没有被修改。"
+      generation_failed: "没有生成回复。任务没有被修改。"
       timeout: "模型在 180 秒内没有回复，请重试。"
       connection: "无法连接模型服务，请检查服务后重试。"
       authentication: "模型服务拒绝了认证信息，请联系管理员检查 AI 设置。"
       configuration: "模型配置无效，请联系管理员检查 AI 设置。"
       rate_limited: "模型服务繁忙或已限流，请稍后重试。"
       invalid_response: "模型返回的内容格式无效，请重试。"
-      record_reply_failed: "回复已经生成，但无法更新工作包描述和活动。%{reason}"
+      record_reply_failed: "回复已经生成，但无法更新任务描述和活动。%{reason}"
       model_unready: "代理未启用，或还没有配置模型。"
       not_allowed: "你不能记录这个结果。"
-      missing_agent: "没有配置服务账号，工作包没有被修改。"
-      missing_status: "找不到内置状态 %{status}，工作包没有被修改。"
+      missing_agent: "没有配置服务账号，任务没有被修改。"
+      missing_status: "找不到内置状态 %{status}，任务没有被修改。"
       missing_supervisor: "没有配置 R&D 主管，负责人没有被修改。"
-      related_without_assignee: "关联工作包没有负责人，负责人没有被修改。"
-      close_without_test: "最新的测试记录还不是通过，工作包不会关闭。"
+      related_without_assignee: "关联任务没有负责人，负责人没有被修改。"
+      close_without_test: "最新的测试记录还不是通过，任务不会关闭。"
       missing_previous_assignee: "没有记下修复前的负责人，负责人没有被修改。"
       workflow: "工作流不允许这次变更，描述、评论、负责人和状态都保持原样。%{reason}"
     conclusions:
@@ -127,7 +194,7 @@ zh-CN:
       no_log: "无日志附件"
     prompt:
       instructions: |
-        你是工作包代理。只根据下面这一条工作包的材料和用户消息回答，不要使用其他工作包的描述、评论或附件。
+        你是任务代理。只根据下面这一条任务的材料和用户消息回答，不要使用其他任务的描述、评论或附件。
         回答尽量写成一段连贯、自然的话，不要输出字段名、填空表格、检查清单或标题。把相关背景、判断和下一步建议合并在这段回答中。材料不足时直接说明，不要编造日志、报错或代码。
         answer 放给用户看的完整回答，file_changes 放用户要求的代码修改。
         %{code_instruction}
@@ -145,6 +212,7 @@ zh-CN:
       repository: "仓库: %{repository}"
       fix_branch: "修复分支: %{branch}"
       pull_request: "Pull Request: %{url}"
+      proposal_ready: "已生成包含 %{files} 个文件的代码变更提案。请审查下方文件摘要，确认后才会写入 Gitea 并创建 Pull Request。"
       user: "用户"
       choose_paths: |
         下面是仓库分支 %{branch} 的文件路径。选出和这段材料最相关的最多 %{limit} 个文件路径，不要编造列表里没有的路径。
@@ -154,7 +222,7 @@ zh-CN:
         %{paths}
       file: "文件 %{path}"
     context:
-      work_package: "工作包 #%{id}"
+      work_package: "任务 #%{id}"
       subject: "标题: %{subject}"
       status: "状态: %{status}"
       type: "类型: %{type}"
@@ -176,5 +244,24 @@ zh-CN:
       truncated: "[已截断]"
     gitea:
       wrong_site: "仓库不属于已配置的 Gitea 站点"
+      unmapped_repository: "该仓库没有映射到当前 Project。"
+      invalid_branch: "所选分支不存在或已发生变化，请重新选择。"
       missing_token: "Gitea 令牌未配置"
       no_changes: "没有可提交的代码修改"
+      too_many_files: "提案包含过多文件。"
+      changes_too_large: "提案总大小超过限制。"
+      file_too_large: "文件 %{path} 超过大小限制。"
+      path_not_allowed: "不允许修改路径 %{path}。"
+      invalid_attempt_state: "该提案当前不能确认。"
+      stale_proposal: "源分支在提案生成后已变化，请重新生成提案。"
+      webhook_state: "Gitea Pull Request 状态已更新为 %{state}：%{url}"
+      connection_ok: "Gitea 连接成功：%{version}，用户 %{user}"
+      connection_errors:
+        dns_failure: "无法解析 Gitea 地址。"
+        connect_timeout: "连接 Gitea 超时。"
+        tls_failure: "Gitea TLS 证书验证失败。"
+        authentication_failed: "Gitea 令牌认证失败。"
+        permission_denied: "Gitea 令牌权限不足。"
+        api_not_found: "找不到 Gitea API，请检查 Base URL 和反向代理子路径。"
+        invalid_response: "Gitea 返回了无效响应。"
+        gitea_error: "Gitea 返回错误。"

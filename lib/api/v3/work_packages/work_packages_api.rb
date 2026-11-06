@@ -90,17 +90,11 @@ module API
             delete &::API::V3::Utilities::Endpoints::Delete.new(model: WorkPackage)
                                                            .mount
 
-            mount ::API::V3::WorkPackages::WatchersAPI
             mount ::API::V3::Activities::ActivitiesByWorkPackageAPI
             mount ::API::V3::Attachments::AttachmentsByWorkPackageAPI
-            mount ::API::V3::Repositories::RevisionsByWorkPackageAPI
             mount ::API::V3::WorkPackages::UpdateFormAPI
             mount ::API::V3::WorkPackages::AvailableAssigneesAPI
-            mount ::API::V3::AI::TextTransformActionsByWorkPackageAPI
             mount ::API::V3::WorkPackages::AvailableProjectsOnEditAPI
-            mount ::API::V3::WorkPackages::AvailableRelationCandidatesAPI
-            mount ::API::V3::WorkPackages::WorkPackageRelationsAPI
-            mount ::API::V3::Reminders::RemindersByWorkPackageAPI
             mount ::API::V3::EmojiReactions::EmojiReactionsByWorkPackageCommentsAPI
           end
 

@@ -32,10 +32,14 @@ See COPYRIGHT and LICENSE files for more details.
   end
 %>
 
-<%= render Homescreen::AnnouncementComponent.new(announcement: @announcement) %>
+<% if User.current.logged? %>
+  <%= render ResolutionAgent::TaskHomeComponent.new(user: User.current, params:) %>
+<% else %>
+  <%= render Homescreen::AnnouncementComponent.new(announcement: @announcement) %>
 
-<%= render Homescreen::BlocksGridComponent.new(homescreen: @homescreen) %>
+  <%= render Homescreen::BlocksGridComponent.new(homescreen: @homescreen) %>
 
-<%= render Homescreen::LinksComponent.new(homescreen: @homescreen) %>
+  <%= render Homescreen::LinksComponent.new(homescreen: @homescreen) %>
 
-<%= call_hook :homescreen_after_links %>
+  <%= call_hook :homescreen_after_links %>
+<% end %>

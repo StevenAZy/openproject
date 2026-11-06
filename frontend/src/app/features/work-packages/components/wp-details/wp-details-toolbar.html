@@ -1,20 +1,8 @@
 <div class="work-packages--details-toolbar">
-  <wp-watcher-button [workPackage]="workPackage" />
-
   @if (displayNotificationsButton) {
     <op-work-package-mark-notification-button [workPackage]="workPackage"
       data-test-selector="mark-notification-read-button"
      />
-  }
-
-  @if (displayShareButton$ | async) {
-    <wp-share-button [workPackage]="workPackage"
-       />
-  }
-
-  @if (displayReminderButton$ | async) {
-    <wp-reminder-button [workPackage]="workPackage"
-       />
   }
 
   <button class="button dropdown-relative"

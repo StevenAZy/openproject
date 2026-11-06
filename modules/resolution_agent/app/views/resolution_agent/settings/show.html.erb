@@ -16,3 +16,67 @@
     render(ResolutionAgent::SettingsForm.new(form))
   end
 %>
+
+<%= button_to t("resolution_agent.settings.test_gitea_connection"),
+              test_connection_resolution_agent_settings_path,
+              method: :post,
+              class: "button" %>
+
+<h2><%= t("resolution_agent.settings.project_repositories") %></h2>
+
+<%= form_with scope: :resolution_agent_project_repository,
+              url: resolution_agent_project_repositories_path,
+              method: :post do |form| %>
+  <div class="form--field">
+    <%= form.label :project_id, Project.model_name.human %>
+    <%= form.select :project_id, @projects.map { |project| [project.name, project.id] }, required: true %>
+  </div>
+  <div class="form--field">
+    <%= form.label :owner, t("resolution_agent.settings.repository_owner") %>
+    <%= form.text_field :owner, required: true %>
+  </div>
+  <div class="form--field">
+    <%= form.label :name, t("resolution_agent.settings.repository_name") %>
+    <%= form.text_field :name, required: true %>
+  </div>
+  <div class="form--field">
+    <%= form.label :display_name, t("resolution_agent.settings.repository_display_name") %>
+    <%= form.text_field :display_name %>
+  </div>
+  <div class="form--field">
+    <%= form.label :default_branch, t("resolution_agent.settings.repository_default_branch") %>
+    <%= form.text_field :default_branch %>
+  </div>
+  <%= form.submit t(:button_add), class: "button -primary" %>
+<% end %>
+
+<div class="generic-table--container">
+  <div class="generic-table--results-container">
+    <table class="generic-table" data-controller="table-highlighting">
+      <thead>
+        <tr>
+          <th><%= Project.model_name.human %></th>
+          <th><%= t("resolution_agent.settings.repository") %></th>
+          <th><%= t("resolution_agent.settings.repository_default_branch") %></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @project_repositories.each do |repository| %>
+          <tr>
+            <td><%= repository.project.name %></td>
+            <td><%= repository.display_name %> (<%= repository.full_name %>)</td>
+            <td><%= repository.default_branch.presence || "—" %></td>
+            <td>
+              <%= button_to t(:button_delete),
+                            resolution_agent_project_repository_path(repository),
+                            method: :delete,
+                            class: "button -danger",
+                            form: { data: { turbo_confirm: t(:text_are_you_sure) } } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

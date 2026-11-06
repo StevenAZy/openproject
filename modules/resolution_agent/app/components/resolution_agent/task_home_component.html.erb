@@ -1,0 +1,80 @@
+<section class="op-task-home">
+  <div class="op-title-bar">
+    <h2 class="op-title-bar__title"><%= t("resolution_agent.task_home.title") %></h2>
+    <%= link_to t("resolution_agent.task_home.create"), new_work_package_path, class: "button -primary" %>
+  </div>
+
+  <%= form_with url: helpers.home_path, method: :get, class: "form -wide-labels" do |form| %>
+    <div class="form--field-container">
+      <%= form.search_field :task_query,
+                            value: query,
+                            placeholder: t("resolution_agent.task_home.search"),
+                            class: "form--text-field" %>
+      <%= form.hidden_field :task_filter, value: filter %>
+      <%= form.submit t("resolution_agent.task_home.search_action"), class: "button" %>
+    </div>
+  <% end %>
+
+  <nav class="op-tab-row" aria-label="<%= t("resolution_agent.task_home.filters.label") %>">
+    <% ResolutionAgent::TaskHomeComponent::FILTERS.each do |value| %>
+      <%= link_to t("resolution_agent.task_home.filters.#{value}"),
+                  filter_path(value),
+                  class: ["op-tab-row--tab", ("selected" if filter == value)].compact %>
+    <% end %>
+  </nav>
+
+  <% if tasks.empty? %>
+    <%= render(Primer::Beta::Blankslate.new) do |component| %>
+      <% component.with_visual_icon(icon: :check) %>
+      <% component.with_heading(tag: :h3) { t("resolution_agent.task_home.empty") } %>
+      <% component.with_description { t("resolution_agent.task_home.empty_description") } %>
+    <% end %>
+  <% else %>
+    <div class="generic-table--container">
+      <div class="generic-table--results-container">
+        <table class="generic-table" data-controller="table-highlighting">
+          <thead>
+            <tr>
+              <th><%= WorkPackage.human_attribute_name(:id) %></th>
+              <th><%= WorkPackage.human_attribute_name(:project) %></th>
+              <th><%= WorkPackage.human_attribute_name(:type) %></th>
+              <th><%= WorkPackage.human_attribute_name(:subject) %></th>
+              <th><%= WorkPackage.human_attribute_name(:status) %></th>
+              <th><%= WorkPackage.human_attribute_name(:priority) %></th>
+              <th><%= WorkPackage.human_attribute_name(:assigned_to) %></th>
+              <th><%= WorkPackage.human_attribute_name(:due_date) %></th>
+              <th><%= WorkPackage.human_attribute_name(:updated_at) %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% tasks.each do |task| %>
+              <tr>
+                <td><%= link_to task.id, work_package_path(task) %></td>
+                <td><%= task.project.name %></td>
+                <td><%= task.type.name %></td>
+                <td><%= link_to task.subject, work_package_path(task) %></td>
+                <td><%= task.status.name %></td>
+                <td><%= task.priority.name %></td>
+                <td><%= task.assigned_to&.name || "—" %></td>
+                <td><%= helpers.format_date(task.due_date) %></td>
+                <td><%= helpers.format_time(task.updated_at) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <% if total_pages > 1 %>
+    <nav class="pagination" aria-label="<%= t("resolution_agent.task_home.pagination") %>">
+      <% if page > 1 %>
+        <%= link_to t("resolution_agent.task_home.previous"), filter_path(filter, target_page: page - 1), class: "button" %>
+      <% end %>
+      <span><%= t("resolution_agent.task_home.page", page:, pages: total_pages) %></span>
+      <% if page < total_pages %>
+        <%= link_to t("resolution_agent.task_home.next"), filter_path(filter, target_page: page + 1), class: "button" %>
+      <% end %>
+    </nav>
+  <% end %>
+</section>

@@ -5,12 +5,13 @@ module ResolutionAgent
     class CodeFix
       MAX_FILES = 5
 
-      def initialize(setting:, repository_url:, branch:, work_package:, changes:)
+      def initialize(setting:, repository_url:, branch:, work_package:, changes:, fix_branch: nil)
         @setting = setting
         @repository_url = repository_url
         @branch = branch
         @work_package = work_package
         @changes = Array(changes).first(MAX_FILES)
+        @fix_branch = fix_branch
       end
 
       def call
@@ -20,7 +21,7 @@ module ResolutionAgent
         return failure(I18n.t("resolution_agent.gitea.missing_token")) if @setting.gitea_token.blank?
 
         client = Client.new(repository, token: @setting.gitea_token)
-        fix_branch = "agent/#{@work_package.id}"
+        fix_branch = @fix_branch || "agent/task-#{@work_package.id}/attempt-#{SecureRandom.hex(6)}"
         written = false
         @changes.each do |change|
           path = change[:path] || change["path"]
@@ -32,13 +33,20 @@ module ResolutionAgent
           written = true
         end
         return failure(I18n.t("resolution_agent.gitea.no_changes")) unless written
-        url = client.pull_request(
+        pull_request = client.pull_request(
           head: fix_branch,
           base: @branch,
           title: "Fix ##{@work_package.id} #{@work_package.subject}".truncate(70),
           body: "Resolution agent fix for work package ##{@work_package.id}"
         )
-        { ok: true, repository: repository.web_base, source_branch: @branch, fix_branch:, pull_request_url: url }
+        {
+          ok: true,
+          repository: repository.web_base,
+          source_branch: @branch,
+          fix_branch:,
+          pull_request_url: pull_request["html_url"],
+          pull_request_number: pull_request["number"]
+        }
       rescue Error => e
         failure(e.message)
       end

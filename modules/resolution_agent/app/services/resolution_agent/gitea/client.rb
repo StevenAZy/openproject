@@ -19,6 +19,10 @@ module ResolutionAgent
         Array(ref["tree"]).filter_map { |entry| entry["path"] if entry["type"] == "blob" }.first(limit)
       end
 
+      def branch(name)
+        request(:get, "/branches/#{escape(name)}")
+      end
+
       def file(path, branch)
         request(:get, "/contents/#{escape_path(path)}?ref=#{escape(branch)}")
       end
@@ -35,8 +39,6 @@ module ResolutionAgent
 
       def ensure_branch(new_branch, from_branch)
         request(:post, "/branches", { new_branch_name: new_branch, old_branch_name: from_branch })
-      rescue Error => e
-        raise unless e.message.include?("409")
       end
 
       def write_file(path, branch, content, message)
@@ -65,10 +67,9 @@ module ResolutionAgent
       def pull_request(head:, base:, title:, body:)
         existing = request(:get, "/pulls?state=open")
         found = Array(existing).find { |pull| pull.dig("head", "ref") == head && pull.dig("base", "ref") == base }
-        return found["html_url"] if found
+        return found if found
 
-        created = request(:post, "/pulls", { head:, base:, title:, body: })
-        created["html_url"]
+        request(:post, "/pulls", { head:, base:, title:, body: })
       end
 
       private

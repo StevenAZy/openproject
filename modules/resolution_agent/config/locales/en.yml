@@ -1,5 +1,9 @@
 en:
+  label_work_package: "Task"
+  label_work_package_plural: "Tasks"
   js:
+    label_work_package: "Task"
+    label_work_package_plural: "Tasks"
     work_packages:
       tabs:
         resolution_agent: "Agent"
@@ -9,9 +13,11 @@ en:
     you: "You"
     agent: "Agent"
     send: "Send"
+    cancel_generation: "Cancel generation"
+    generation_cancelled: "Generation cancelled."
     message_placeholder: "Message the agent"
     generating: "A reply is already being generated."
-    denied: "Only the author, the current assignee, the configured R&D supervisor, or an administrator who can view this work package can open this agent."
+    denied: "Only the author, current assignee, configured R&D supervisor, or an administrator who can view this task can open the agent."
     gitea_url: "Gitea repository URL"
     branch: "Branch"
     code_fix: "Try a code fix"
@@ -19,16 +25,55 @@ en:
     generating_reply: "Generating a reply."
     waiting_time: "Waiting for %{seconds} seconds"
     waiting_time_template: "Waiting for __SECONDS__ seconds"
+    task_home:
+      title: "My tasks"
+      all_tasks: "View all tasks"
+      create: "Create task"
+      search: "Search task titles"
+      search_action: "Search"
+      pagination: "Task pagination"
+      previous: "Previous"
+      next: "Next"
+      page: "Page %{page} of %{pages}"
+      filters:
+        label: "Task quick filters"
+        all: "All"
+        assigned: "Assigned to me"
+        authored: "Created by me"
+        processing: "In progress"
+        verification: "Waiting for my verification"
+      empty: "No open tasks"
+      empty_description: "Tasks directly assigned to you or created by you will appear here."
+    projects:
+      title: "Projects"
+      create: "Create project"
+      search: "Search projects"
+      empty: "No visible projects"
+      status: "Status"
+      active: "Active"
+      my_open_tasks: "My open tasks"
+      pagination: "Project pagination"
     generation_phases:
       queued: "Queued for processing"
-      analyzing: "Analyzing the work package"
+      analyzing: "Analyzing the task"
       reading_repository: "Reading the repository"
       generating: "Generating a reply"
       creating_fix: "Creating the code fix and pull request"
     job:
       title: "Generate an agent reply"
-    settings_hint: "The service account needs permission to view and edit the work package and to add comments. Outcomes use the built-in statuses Tested, In progress, In testing, and Closed, so the workflow must allow those transitions. Leave a secret blank to keep the saved value."
-    choose_assignee: "Related work packages have different assignees. Choose one."
+    fix_attempt:
+      title: "Code change proposal #%{id}"
+      confirm: "Confirm and create Pull Request"
+      confirm_prompt: "This creates a unique fix branch and writes the proposed changes to Gitea. Continue?"
+      statuses:
+        awaiting_confirmation: "Waiting for R&D confirmation"
+        pushing: "Creating branch"
+        pull_request_opened: "Pull Request created"
+        failed: "Creation failed"
+        merged: "Merged"
+        closed: "Closed"
+    settings_hint: "The service account needs permission to view and edit tasks and to add comments. Configure the workflow statuses and allow the service account to perform those transitions. Leave a secret blank to keep the saved value."
+    choose_assignee: "Related tasks have different assignees. Choose one."
     empty:
       author: "Describe what is happening on site."
     stages:
@@ -56,8 +101,8 @@ en:
       pe_unresolved: "Status becomes In progress. The description becomes the summary and keeps the original record."
       fix_succeeded: "Status becomes In testing, and a summary comment is added."
       fix_failed: "Status stays the same. The assignee returns to the person from before this fix, and a summary comment is added."
-      test_passed: "Records a passed test. Status stays the same until the supervisor confirms completion."
-      test_failed: "Records a failed test. Status stays In testing."
+      test_passed: "Records a passed test and closes the task."
+      test_failed: "Records a failed test and returns the task to R&D in progress."
       supervisor_close: "Status becomes Closed, and a summary comment is added."
     outcome:
       status_changed: "Status becomes %{status}"
@@ -69,6 +114,15 @@ en:
       service_account: "Service account"
       supervisor: "R&D supervisor"
       accounts: "Service account and R&D supervisor"
+      notifications: "In-app notifications"
+      notifications_hint: "The task author and current assignee are always candidate recipients. Add system-wide recipients here. The actor and users without project access are excluded."
+      notification_recipients: "Additional notification recipients"
+      workflow: "PE/R&D workflow"
+      workflow_hint: "Statuses are stored by ID, not by name. Ensure roles and the service account can transition Waiting for R&D → R&D in progress → Waiting for PE verification → Closed, including the verification-failed return."
+      status_waiting_rd: "Waiting for R&D"
+      status_rd_working: "R&D in progress"
+      status_pe_verification: "Waiting for PE verification"
+      status_closed: "Closed"
       gitea: "Gitea"
       llm: "Model"
       llm_hint: "OpenAI-compatible API. For a local model, enter its base URL, usually ending in /v1. Leave the key blank when the server does not require one."
@@ -77,6 +131,19 @@ en:
       llm_api_key: "API key"
       gitea_base_url: "Gitea site URL"
       gitea_token: "Gitea token"
+      gitea_webhook_secret: "Webhook secret"
+      gitea_tls_mode: "TLS verification"
+      gitea_custom_ca: "Custom CA certificate (PEM)"
+      gitea_tls_modes:
+        system_ca: "System CA"
+        custom_ca: "System CA + custom CA"
+      test_gitea_connection: "Test Gitea connection"
+      project_repositories: "Project repository mappings"
+      repository_owner: "Repository owner"
+      repository_name: "Repository name"
+      repository_display_name: "Display name"
+      repository_default_branch: "Default branch"
+      repository: "Repository"
     actions:
       pe_resolved: "Resolved on site"
       pe_unresolved: "Not resolved"
@@ -86,25 +153,25 @@ en:
       test_failed: "Test failed"
       supervisor_close: "Confirm completion"
     errors:
-      unavailable: "This agent is not available on this work package."
+      unavailable: "This agent is not available on this task."
       empty: "Enter a message first."
       busy: "A reply is already being generated."
       enqueue_failed: "The reply could not be queued. Please try again."
-      generation_failed: "The reply was not generated. The work package was not changed."
+      generation_failed: "The reply was not generated. The task was not changed."
       timeout: "The model did not reply within 180 seconds. Please try again."
       connection: "The model service could not be reached. Check the service and try again."
       authentication: "The model service rejected its credentials. Ask an administrator to check the AI settings."
       configuration: "The model configuration is invalid. Ask an administrator to check the AI settings."
       rate_limited: "The model service is busy or rate limited. Please try again later."
       invalid_response: "The model returned an invalid response. Please try again."
-      record_reply_failed: "The reply was generated, but the work package description and activity could not be updated. %{reason}"
+      record_reply_failed: "The reply was generated, but the task description and activity could not be updated. %{reason}"
       model_unready: "The agent is switched off, or its model is not configured."
       not_allowed: "You cannot record this outcome."
-      missing_agent: "No service account is configured, so the work package was not changed."
-      missing_status: "The built-in status %{status} was not found, so the work package was not changed."
+      missing_agent: "No service account is configured, so the task was not changed."
+      missing_status: "The built-in status %{status} was not found, so the task was not changed."
       missing_supervisor: "No R&D supervisor is configured, so the assignee was not changed."
-      related_without_assignee: "The related work packages have no assignee, so the assignee was not changed."
-      close_without_test: "The latest test is not a pass, so the work package will not be closed."
+      related_without_assignee: "The related tasks have no assignee, so the assignee was not changed."
+      close_without_test: "The latest test is not a pass, so the task will not be closed."
       missing_previous_assignee: "The assignee from before the fix was not recorded, so the assignee was not changed."
       workflow: "The workflow does not allow this change, so the description, comment, assignee, and status were left unchanged. %{reason}"
     conclusions:
@@ -127,7 +194,7 @@ en:
       no_log: "No log attachment"
     prompt:
       instructions: |
-        You are the work package agent. Answer only from the materials for this one work package and the user's message. Do not use descriptions, comments, or attachments from other work packages.
+        You are the task agent. Answer only from this task's materials and the user's message. Do not use descriptions, comments, or attachments from other tasks.
         Write answer as one cohesive, natural paragraph whenever possible. Do not output field labels, a form, a checklist, or headings. Combine the relevant context, diagnosis, and next step into that answer. If the materials are insufficient, say so plainly. Do not invent logs, errors, or code.
         Return answer with the user-facing prose and file_changes with any requested code changes.
         %{code_instruction}
@@ -145,6 +212,7 @@ en:
       repository: "Repository: %{repository}"
       fix_branch: "Fix branch: %{branch}"
       pull_request: "Pull Request: %{url}"
+      proposal_ready: "A code change proposal containing %{files} files is ready. Review the file summary below; Gitea is not modified until you confirm it."
       user: "User"
       choose_paths: |
         These are the file paths on branch %{branch}. Choose at most %{limit} paths that are most relevant to the materials. Do not invent paths that are not in the list.
@@ -154,7 +222,7 @@ en:
         %{paths}
       file: "File %{path}"
     context:
-      work_package: "Work package #%{id}"
+      work_package: "Task #%{id}"
       subject: "Subject: %{subject}"
       status: "Status: %{status}"
       type: "Type: %{type}"
@@ -176,5 +244,24 @@ en:
       truncated: "[truncated]"
     gitea:
       wrong_site: "The repository is not on the configured Gitea site"
+      unmapped_repository: "This repository is not mapped to the current project."
+      invalid_branch: "The selected branch does not exist or has changed. Select it again."
       missing_token: "The Gitea token is not configured"
       no_changes: "There are no code changes to commit"
+      too_many_files: "The proposal contains too many files."
+      changes_too_large: "The proposal exceeds the total size limit."
+      file_too_large: "File %{path} exceeds the size limit."
+      path_not_allowed: "Path %{path} cannot be modified."
+      invalid_attempt_state: "This proposal cannot be confirmed in its current state."
+      stale_proposal: "The source branch changed after this proposal was generated. Generate a new proposal."
+      webhook_state: "Gitea Pull Request state changed to %{state}: %{url}"
+      connection_ok: "Gitea connection succeeded: %{version}, user %{user}"
+      connection_errors:
+        dns_failure: "The Gitea host could not be resolved."
+        connect_timeout: "The Gitea connection timed out."
+        tls_failure: "Gitea TLS certificate verification failed."
+        authentication_failed: "The Gitea token was rejected."
+        permission_denied: "The Gitea token does not have sufficient permission."
+        api_not_found: "The Gitea API was not found. Check the base URL and reverse-proxy path."
+        invalid_response: "Gitea returned an invalid response."
+        gitea_error: "Gitea returned an error."

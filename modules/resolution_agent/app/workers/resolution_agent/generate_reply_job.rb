@@ -4,7 +4,7 @@ module ResolutionAgent
   class GenerateReplyJob < ApplicationJob
     queue_with_priority :above_normal
 
-    def perform(user:, work_package:, conversation_id:, token:, body:, gitea_url: nil, branch: nil)
+    def perform(user:, work_package:, conversation_id:, token:, body:, gitea_url: nil, branch: nil, repository_id: nil)
       @user = user
       @work_package = work_package
       @conversation = Conversation.find(conversation_id)
@@ -12,7 +12,7 @@ module ResolutionAgent
 
       User.execute_as(user) do
         OpenProject::LocaleHelper.with_locale_for(user) do
-          run(body:, gitea_url:, branch:)
+          run(body:, gitea_url:, branch:, repository_id:)
         end
       end
     ensure
@@ -29,10 +29,10 @@ module ResolutionAgent
 
     attr_reader :conversation, :token, :user, :work_package
 
-    def run(body:, gitea_url:, branch:)
+    def run(body:, gitea_url:, branch:, repository_id:)
       raise Chat::StaleGeneration unless conversation.generation_current?(token)
 
-      Chat.new(user:, work_package:, body:, gitea_url:, branch:).generate(
+      Chat.new(user:, work_package:, body:, gitea_url:, branch:, repository_id:).generate(
         conversation:,
         token:,
         on_phase: method(:set_phase)

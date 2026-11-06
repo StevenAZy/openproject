@@ -469,17 +469,6 @@ Rails.application.routes.draw do
     get "diff/:field", action: :diff, on: :member, as: "diff"
   end
 
-  # REVIEW: review those wiki routes
-  scope "projects/:project_id/wiki/:id" do
-    resource :wiki_menu_item, only: %i[edit update]
-  end
-
-  # generic route for adding/removing watchers
-  scope ":object_type/:object_id", constraints: OpenProject::Acts::Watchable::RouteConstraint do
-    post "/watch" => "watchers#watch"
-    delete "/unwatch" => "watchers#unwatch"
-  end
-
   # generic route for adding/removing favorites
   scope ":object_type/:object_id", constraints: OpenProject::Acts::Favoritable::RouteConstraint do
     post "/favorite" => "favorites#favorite"
@@ -577,9 +566,6 @@ Rails.application.routes.draw do
             post :disable_all
           end
         end
-        resource :repository, only: %i[show], controller: "repository"
-        resource :versions, only: %i[show]
-        resource :storage, only: %i[show], controller: "storage"
         get :types, to: redirect("projects/%{project_id}/settings/work_packages/types")
         get :categories, to: redirect("projects/%{project_id}/settings/work_packages/categories")
         resource :work_packages, only: %i[show]
@@ -634,66 +620,11 @@ Rails.application.routes.draw do
       post :deactivate_work_package_attachments
     end
 
-    resources :versions, only: %i[new create] do
-      collection do
-        put :close_completed
-      end
-    end
-
-    # this is only another name for versions#index
-    # For nice "road in the url for the index action
-    # this could probably be rewritten with a resource as: 'roadmap'
-    get "/roadmap" => "versions#index"
-
-    resources :news do
-      resources :comments, controller: "news/comments", only: %i[create destroy]
-    end
-
-    # Match everything to be the ID of the wiki page except the part that
-    # is reserved for the format. This assumes that we have only two formats:
-    # .txt and .html
-    resources :wiki,
-              constraints: { id: /([^\/]+(?=\.markdown)|[^\/]+)/ },
-              except: %i[index create] do
-      collection do
-        post "/new" => "wiki#create", as: "create"
-        get :export
-        get "/index" => "wiki#index"
-        get :menu
-        get :menu_tree
-      end
-
-      member do
-        get "/new" => "wiki#new_child", as: "new_child"
-        get "/diff/:version/vs/:version_from" => "wiki#diff", as: "wiki_diff_compare"
-        get "/diff(/:version)" => "wiki#diff", as: "wiki_diff"
-        get "/annotate/:version" => "wiki#annotate", as: "wiki_annotate"
-        get "/toc" => "wiki#index"
-        match :rename, via: %i[get patch]
-        get :parent_page, action: "edit_parent_page"
-        patch :parent_page, action: "update_parent_page"
-        get :history
-        post :protect
-        get :select_main_menu_item, to: "wiki_menu_items#select_main_menu_item"
-        post :replace_main_menu_item, to: "wiki_menu_items#replace_main_menu_item"
-      end
-    end
-
-    # as routes for index and show are swapped
-    # it is necessary to define the show action later
-    # than any other route as it otherwise would
-    # work as a catchall for everything under /wiki
-    get "wiki" => "wiki#show"
-
     resources :work_packages, only: %i[index show] do
       collection do
-        get "/report/:detail" => "work_packages/reports#report_details"
-        get "/report" => "work_packages/reports#report"
         get "menu" => "work_packages/menus#show"
-        get "/export_dialog" => "work_packages#export_dialog"
       end
 
-      get "/copy" => "work_packages#copy", on: :member, as: "copy"
       get "/new" => "work_packages#new", on: :collection, as: "new"
 
       get "(/:tab)" => "work_packages#show", on: :member, as: "",
@@ -712,32 +643,6 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :activity, :activities, only: :index, controller: "activities" do
-      collection do
-        get :menu
-      end
-    end
-
-    resources :forums do
-      resources :topics, controller: "messages", except: [:index] do
-        resource :accepted_solution, only: %i[create destroy], controller: "messages/accepted_solutions"
-
-        member do
-          get :quote
-          get :replies
-          post :reply, as: "reply_to"
-        end
-
-        resource :work_package, only: %i[new create], controller: "messages/work_packages" do
-          post :refresh_form
-        end
-      end
-
-      member do
-        put :move
-      end
-    end
-
     resources :categories, except: %i[index show], shallow: true
 
     resources :members, only: %i[index create update] do
@@ -749,52 +654,6 @@ Rails.application.routes.draw do
       end
     end
 
-    resource :repository, controller: "repositories", except: [:new] do
-      # Destroy uses a get request to prompt the user before the actual DELETE request
-      get :destroy_info
-      get :committers
-      post :committers
-      get :graph
-      get :revisions
-
-      get "/statistics", action: :stats, as: "stats"
-
-      get "(/revisions/:rev)/diff.:format", action: :diff
-      get "(/revisions/:rev)/diff(/*repo_path)",
-          action: :diff,
-          format: "html",
-          constraints: { rev: /[\w.-]+/, repo_path: /.*/ }
-
-      get "(/revisions/:rev)/:format/*repo_path",
-          action: :entry,
-          format: /raw/,
-          rev: /[\w.-]+/
-
-      %w{diff annotate changes entry browse}.each do |action|
-        get "(/revisions/:rev)/#{action}(/*repo_path)",
-            format: "html",
-            action:,
-            constraints: { rev: /[\w.-]+/, repo_path: /.*/ },
-            as: "#{action}_revision"
-      end
-
-      get "/revision(/:rev)", rev: /[\w.-]+/,
-                              action: :revision,
-                              as: "show_revision"
-
-      get "(/revisions/:rev)(/*repo_path)",
-          action: :show,
-          format: "html",
-          constraints: { rev: /[\w.-]+/, repo_path: /.*/ },
-          as: "show_revisions_path"
-    end
-  end
-
-  resources :portfolios,
-            only: %i[index]
-
-  namespace :portfolios do
-    resource :menu, only: %i[show]
   end
 
   resources :project_phases, only: [] do
@@ -815,26 +674,6 @@ Rails.application.routes.draw do
 
   scope "admin" do
     resource :announcements, only: %i[edit update]
-
-    get "/enterprise", to: redirect("#{rails_relative_url_root}/admin/enterprise_tokens")
-
-    constraints(Constraints::Enterprise) do
-      resources :enterprise_tokens, only: %i[index new create destroy] do
-        member do
-          get :destroy_dialog
-        end
-
-        collection do
-          post :save_trial_key
-          delete :delete_trial_key
-        end
-      end
-
-      resource :enterprise_trial, only: %i[show create destroy] do
-        get :trial_dialog
-        post :request_resend, on: :collection
-      end
-    end
 
     delete "design/logo/:field" => "custom_styles#logo_delete",
            as: "custom_style_logo_delete",
@@ -940,10 +779,6 @@ Rails.application.routes.draw do
         get :status, on: :member
         get :confirm_dialog, on: :member, defaults: { format: :turbo_stream }
       end
-      resource :versions_and_categories, controller: "/admin/settings/versions_and_categories", only: %i[show] do
-        post :enable_multiple_versions, on: :member
-        get :confirm_dialog, on: :member, defaults: { format: :turbo_stream }
-      end
       resources :work_package_priorities, except: [:show] do
         member do
           put :move
@@ -951,7 +786,6 @@ Rails.application.routes.draw do
         end
       end
 
-      resource :progress_tracking, controller: "/admin/settings/progress_tracking", only: %i[show update]
       resource :projects, controller: "/admin/settings/projects_settings", only: %i[show update]
       resource :new_project, controller: "/admin/settings/new_project_settings", only: %i[show update]
       resources :project_phase_definitions,
@@ -1264,13 +1098,7 @@ Rails.application.routes.draw do
   end
 
   resources :work_packages, only: %i[index show new] do
-    concerns :shareable
-
     get "hover_card" => "work_packages/hover_card#show", on: :member
-    get "project_attributes" => "work_packages/project_attributes_tab#index", on: :member
-
-    get "generate_pdf_dialog" => "work_packages#generate_pdf_dialog", on: :member
-    post "generate_pdf" => "work_packages#generate_pdf", on: :member
 
     post "assign_to_me" => "work_packages#assign_to_me", on: :member
 
@@ -1302,24 +1130,6 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :hierarchy_relations, only: %i[new create destroy], controller: "work_package_hierarchy_relations"
-
-    resources :children, only: %i[new create], controller: "work_package_children" do
-      post :refresh_form, on: :collection
-    end
-
-    resource :progress, only: %i[edit update], controller: "work_packages/progress" do
-      get :preview, on: :member
-    end
-    collection do
-      resource :progress,
-               only: %i[create new],
-               controller: "work_packages/progress",
-               as: :work_package_progress do
-        get :preview, on: :collection
-      end
-    end
-
     resource :date_picker,
              only: %i[show edit update],
              controller: "work_packages/date_picker",
@@ -1336,25 +1146,11 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :relations_tab, only: %i[index], controller: "work_package_relations_tab"
-    resources :relations, only: %i[new create edit update destroy], controller: "work_package_relations"
-
-    resources :reminders,
-              controller: "work_packages/reminders",
-              only: %i[create update destroy] do
-      get :modal_body, on: :collection
-    end
-
-    get "/export_dialog" => "work_packages#export_dialog", on: :collection, as: "export_dialog"
     get :show_conflict_flash_message, on: :collection # we don't need a specific work package for this
 
     get "/split_view/update_counter" => "work_packages/split_view#update_counter",
         on: :member
 
-    get "/split_view/get_relations_counter" => "work_packages/split_view#get_relations_counter",
-        on: :member
-
-    get "/copy" => "work_packages#copy", on: :member, as: "copy"
     get "(/:tab)" => "work_packages#show", on: :member, as: "",
         constraints: { id: WorkPackage::SemanticIdentifier::ID_ROUTE_CONSTRAINT, state: /(?!(shares|new|copy)).+/ }
 
@@ -1362,20 +1158,7 @@ Rails.application.routes.draw do
     get "/" => "work_packages#index", on: :collection, as: "index"
     get "/create_new" => "work_packages#split_create", on: :collection, as: "new_split", work_package_split_create: true
 
-    get "/share_upsell" => "work_packages#share_upsell", on: :collection, as: "share_upsell"
     get "/edit" => "work_packages#show", on: :member, as: "edit"
-  end
-
-  resources :versions, only: %i[show edit update destroy] do
-    member do
-      get :status_by
-    end
-  end
-
-  resources :activity, :activities, only: :index, controller: "activities" do
-    collection do
-      get :menu
-    end
   end
 
   resources :users, constraints: { id: /(\d+|me)/ }, except: :edit do
@@ -1430,8 +1213,6 @@ Rails.application.routes.draw do
   # The show page of groups is public and thus moved out of the admin scope
   resources :groups, only: %i[show], as: :show_group
 
-  resources :news, only: %i[index show]
-
   # redirect for backwards compatibility
   scope "attachments",
         constraints: { id: /\d+/, filename: /[^\/]*/ },
@@ -1458,13 +1239,6 @@ Rails.application.routes.draw do
     end
   end
 
-  scope controller: "sys" do
-    match "/sys/repo_auth", action: "repo_auth", via: %i[get post]
-    get "/sys/fetch_changesets", action: "fetch_changesets"
-    match "/sys/projects", to: proc { [410, {}, [""]] }, via: :all
-    match "/sys/projects/:id/repository/update_storage", to: proc { [410, {}, [""]] }, via: :all
-  end
-
   # alternate routes for the current user
   scope "my" do
     get "/deletion_info" => "users#deletion_info", as: "delete_my_account_info"
@@ -1473,8 +1247,6 @@ Rails.application.routes.draw do
     resources :sessions, controller: "my/sessions", as: "my_sessions", only: %i[index destroy]
     resources :auto_login_tokens, controller: "my/auto_login_tokens", as: "my_auto_login_tokens", only: %i[destroy]
 
-    get "/banner" => "my/enterprise_banners#show", as: "show_enterprise_banner"
-    post "/dismiss_banner" => "my/enterprise_banners#dismiss", as: "dismiss_enterprise_banner"
   end
 
   namespace :my do
@@ -1583,7 +1355,6 @@ Rails.application.routes.draw do
   end
 
   scope :notifications do
-    get "/share_upsell" => "notifications#share_upsell", as: "notifications_share_upsell"
     get "/", to: "notifications#index", as: :notifications_center
   end
 

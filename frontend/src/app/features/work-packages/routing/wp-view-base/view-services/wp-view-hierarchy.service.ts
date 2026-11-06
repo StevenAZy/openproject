@@ -32,17 +32,8 @@ import { WorkPackageQueryStateService } from './wp-view-base.service';
 
 @Injectable()
 export class WorkPackageViewHierarchiesService extends WorkPackageQueryStateService<WorkPackageViewHierarchies> {
-  public valueFromQuery(query:QueryResource):WorkPackageViewHierarchies {
-    const value = new WorkPackageViewHierarchies(query.showHierarchies);
-    const { current } = this;
-
-    // Take over current collapsed values
-    // which are not yet saved
-    if (current) {
-      value.collapsed = current.collapsed;
-    }
-
-    return value;
+  public valueFromQuery(_query:QueryResource):WorkPackageViewHierarchies {
+    return new WorkPackageViewHierarchies(false);
   }
 
   public hasChanged(query:QueryResource) {
@@ -60,11 +51,11 @@ export class WorkPackageViewHierarchiesService extends WorkPackageQueryStateServ
    * Return whether the current hierarchy mode is active
    */
   public get isEnabled():boolean {
-    return !!this.current?.isVisible;
+    return false;
   }
 
-  public setEnabled(active = true) {
-    const state = { ...this.current, isVisible: active, last: null };
+  public setEnabled(_active = true) {
+    const state = { ...this.current, isVisible: false, last: null };
     this.update(state);
   }
 

@@ -34,6 +34,17 @@ module API
 
           include API::Caching::CachedRepresenter
 
+          PRODUCT_FORM_ATTRIBUTES = %w[
+            subject
+            description
+            status
+            priority
+            assignee
+            dueDate
+            type
+            project
+          ].freeze
+
           # type_variant is part of the key on top of type: the configuration in force changes
           # when the project resolves the family to a different variant, which touches neither
           # the project's nor the type's timestamp. form_configuration is a record of its own,
@@ -143,7 +154,7 @@ module API
 
           schema :description,
                  type: "Formattable",
-                 required: false
+                 required: true
 
           schema :duration,
                  type: "Duration",
@@ -376,28 +387,14 @@ module API
                                          required: true,
                                          has_default: true
 
-          schema_with_allowed_collection :budget,
-                                         type: "Budget",
-                                         required: false,
-                                         value_representer: ::API::V3::Budgets::BudgetRepresenter,
-                                         link_factory: ->(budget) {
-                                           {
-                                             href: api_v3_paths.budget(budget.id),
-                                             title: budget.subject
-                                           }
-                                         },
-                                         show_if: ->(*) {
-                                           current_user.allowed_in_project?(:view_budgets, represented.project)
-                                         }
-
           def attribute_groups
-            (represented.type_variant&.attribute_groups || []).map do |group|
-              if group.is_a?(Type::QueryGroup)
-                form_config_query_representation(group)
-              else
-                form_config_attribute_representation(group)
+            (represented.type_variant&.attribute_groups || [])
+              .reject { |group| group.is_a?(Type::QueryGroup) }
+              .filter_map do |group|
+                representation = form_config_attribute_representation(group)
+                representation["attributes"] &= PRODUCT_FORM_ATTRIBUTES
+                representation if representation["attributes"].any?
               end
-            end
           end
 
           ##

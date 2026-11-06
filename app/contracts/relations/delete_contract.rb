@@ -29,10 +29,7 @@
 
 module Relations
   class DeleteContract < ::DeleteContract
-    delete_permission -> {
-      user.allowed_in_work_package?(:manage_work_package_relations, model.from) &&
-        user.allowed_in_work_package?(:manage_work_package_relations, model.to)
-    }
+    delete_permission -> { false }
 
     # Override method to add more specific error
     def user_allowed

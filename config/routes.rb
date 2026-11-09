@@ -658,6 +658,18 @@ Rails.application.routes.draw do
       resources :comments, controller: "news/comments", only: %i[create destroy]
     end
 
+    resources :activity, :activities, only: :index, controller: "activities" do
+      collection do
+        get :menu
+      end
+    end
+
+  end
+
+  resources :activity, :activities, only: :index, controller: "activities" do
+    collection do
+      get :menu
+    end
   end
 
   resources :project_phases, only: [] do

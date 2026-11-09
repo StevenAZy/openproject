@@ -272,6 +272,14 @@ Rails.application.reloader.to_prepare do
 
     end
 
+    map.project_module :activity do
+      map.permission :view_project_activity,
+                     { activities: %i[index menu] },
+                     permissible_on: :project,
+                     public: true,
+                     contract_actions: { activities: %i[read] }
+    end
+
     map.project_module :news do |news|
       news.enabled_by_default!
 

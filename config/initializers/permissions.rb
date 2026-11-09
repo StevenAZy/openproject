@@ -272,6 +272,27 @@ Rails.application.reloader.to_prepare do
 
     end
 
+    map.project_module :news do |news|
+      news.enabled_by_default!
+
+      news.permission :view_news,
+                      { news: %i[index show] },
+                      permissible_on: :project,
+                      public: true
+
+      news.permission :manage_news,
+                      {
+                        news: %i[new create edit update destroy preview],
+                        "news/comments": [:destroy]
+                      },
+                      permissible_on: :project,
+                      require: :member
+
+      news.permission :comment_news,
+                      { "news/comments": :create },
+                      permissible_on: :project
+    end
+
     map.project_module :work_package_tracking, order: 90 do |wpt|
       wpt.enabled_by_default!
 

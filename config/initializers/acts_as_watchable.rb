@@ -34,7 +34,6 @@
 Rails.application.config.to_prepare do
   OpenProject::Acts::Watchable::Registry.add(
     Forum,
-    Meeting,
     Message,
     News,
     Wiki,

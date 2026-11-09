@@ -310,23 +310,6 @@ module Costs
         }
       end
 
-      link :showCosts,
-           cache_if: -> {
-             current_user.allowed_in_project?(:view_cost_entries, represented.project) ||
-             current_user.allowed_in_project?(:view_own_cost_entries, represented.project)
-           } do
-        next unless represented.persisted? && represented.project&.costs_enabled?
-
-        filters = ::CostReports::CompactFilters.new(operators: { "work_package_id" => "=" },
-                                                    values: { "work_package_id" => [represented.id] })
-
-        {
-          href: project_reporting_cost_reports_path(represented.project_id, **filters.to_params),
-          type: "text/html",
-          title: "Show cost entries"
-        }
-      end
-
       property :labor_costs,
                exec_context: :decorator,
                if: ->(*) { labor_costs_visible? },

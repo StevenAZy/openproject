@@ -25,6 +25,8 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
+require Rails.root.join("config/constants/ar_to_api_conversions")
+
 module API
   module Utilities
     # Since APIv3 uses different names for some properties, there is sometimes the need to convert

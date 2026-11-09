@@ -96,16 +96,6 @@ Redmine::MenuManager.map :top_menu do |menu|
             icon: "home",
             first: true
 
-  menu.push :my_page,
-            { controller: "/my/page", action: "show" },
-            context: :my,
-            after: :home,
-            icon: "person",
-            caption: I18n.t("my_page.label"),
-            if: ->(*) do
-              User.current.logged?
-            end
-
   menu.push :my_time,
             { controller: "/my/time_management", action: "index" },
             after: :my_page,
@@ -132,46 +122,6 @@ Redmine::MenuManager.map :quick_add_menu do |menu|
                 User.current.allowed_in_project?(:add_subprojects, project)
             }
 
-  menu.push :new_board,
-            ->(project) { [:new, project, :work_package_board] },
-            caption: ->(_) { I18n.t("boards.label_board") },
-            icon: "op-boards",
-            skip_permissions_check: true, # url is a polymorphic path, not a controller/action hash
-            if: ->(project) {
-              if project
-                User.current.allowed_in_project?(:manage_board_views, project)
-              else
-                User.current.allowed_in_any_project?(:manage_board_views)
-              end
-            }
-
-  menu.push :new_meeting,
-            ->(project) { [:new_dialog, project, :meetings] },
-            caption: ->(_) { I18n.t(:label_meeting) },
-            icon: "comment-discussion",
-            html: {
-              target: nil,
-              data: {
-                controller: "async-dialog"
-              }
-            },
-            skip_permissions_check: true, # url is a polymorphic path, not a controller/action hash
-            if: ->(project) {
-              if project
-                User.current.allowed_in_project?(:create_meetings, project)
-              else
-                User.current.allowed_in_any_project?(:create_meetings)
-              end
-            }
-
-  menu.push :new_document,
-            ->(_project) { { controller: "/documents", action: :new } },
-            caption: ->(_) { Document.model_name.human },
-            icon: "note",
-            if: ->(project) {
-              project.present? && User.current.allowed_in_project?(:manage_documents, project)
-            }
-
   menu.push :invite_user,
             ->(project) {
               { controller: "/users/invite", action: :start_dialog, project_id: project&.id }
@@ -192,11 +142,6 @@ Redmine::MenuManager.map :account_menu do |menu|
   menu.push :timers,
             { controller: "/my/timer", action: "show" },
             partial: "/my/timer/menu"
-  menu.push :my_page,
-            :my_page_path,
-            caption: I18n.t("my_page.label"),
-            icon: :person,
-            if: ->(_) { User.current.logged? }
   menu.push :my_profile,
             { controller: "/users", action: "show", id: "me" },
             caption: :label_my_activity,
@@ -234,15 +179,9 @@ Redmine::MenuManager.map :global_menu do |menu|
             icon: "home",
             first: true
 
-  menu.push :my_page,
-            { controller: "/my/page", action: "show" },
-            after: :home,
-            icon: "person",
-            caption: I18n.t("my_page.label")
-
   menu.push :my_time,
             { controller: "/my/time_management", action: "index", date: "today" },
-            after: :my_page,
+            after: :home,
             caption: :label_my_time,
             if: ->(*) do
               User.current.allowed_in_any_project?(:log_own_time) || User.current.allowed_in_any_project?(:log_time)
@@ -942,30 +881,12 @@ Redmine::MenuManager.map :work_package_split_view do |menu|
                                  .count
                    },
             caption: :"js.work_packages.tabs.activity"
-  menu.push :files,
-            { tab: :files },
-            skip_permissions_check: true,
-            badge: ->(work_package:, **) {
-              count = Storages::FileLink.where(container_type: "WorkPackage", container_id: work_package).count
-              unless work_package.hide_attachments?
-                count += work_package.attachments.count
-              end
-              count
-            },
-            caption: :"js.work_packages.tabs.files"
   menu.push :relations,
             { tab: :relations },
             skip_permissions_check: true,
             badge: ->(work_package:, **) {
               WorkPackageRelationsTab::RelationsMediator.new(work_package: work_package).all_relations_count
             },
-            caption: :"js.work_packages.tabs.relations"
-  menu.push :watchers,
-            { tab: :watchers },
-            skip_permissions_check: true,
-            last: true,
-            badge: ->(work_package:, **) {
-              work_package.watchers.count
-            },
-            caption: :"js.work_packages.tabs.watchers"
+            caption: :"js.work_packages.tabs.relations",
+            last: true
 end

@@ -654,6 +654,10 @@ Rails.application.routes.draw do
       end
     end
 
+    resources :news do
+      resources :comments, controller: "news/comments", only: %i[create destroy]
+    end
+
   end
 
   resources :project_phases, only: [] do
@@ -1212,6 +1216,8 @@ Rails.application.routes.draw do
 
   # The show page of groups is public and thus moved out of the admin scope
   resources :groups, only: %i[show], as: :show_group
+
+  resources :news, only: %i[index show]
 
   # redirect for backwards compatibility
   scope "attachments",

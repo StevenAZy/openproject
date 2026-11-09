@@ -53,6 +53,7 @@ module API
       mount ::API::V3::Days::DaysAPI
       mount ::API::V3::Notifications::NotificationsAPI
       mount ::API::V3::Memberships::MembershipsAPI
+      mount ::API::V3::News::NewsAPI
       mount ::API::V3::OAuth::OAuthApplicationsAPI
       mount ::API::V3::OAuth::OAuthClientCredentialsAPI
       mount ::API::V3::Principals::PrincipalsAPI

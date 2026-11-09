@@ -131,8 +131,6 @@ module WorkPackages
 
     attribute :duration, writable: false
 
-    attribute :budget, writable: false
-
     attribute :labels, writable: false
 
     validates :subject,
@@ -230,10 +228,6 @@ module WorkPackages
 
     def assignable_target_versions = assignable_versions
     def assignable_observed_in_versions = assignable_versions(only_open: false)
-
-    def assignable_budgets
-      model.project&.budgets
-    end
 
     def assignable_assignees
       if model.persisted?

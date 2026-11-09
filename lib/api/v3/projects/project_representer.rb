@@ -71,18 +71,6 @@ module API
           { href: api_v3_paths.work_packages_by_workspace(represented.id) }
         end
 
-        links :storages,
-              cache_if: -> {
-                current_user.allowed_in_project?(:view_file_links, represented)
-              } do
-          represented.storages.map do |storage|
-            {
-              href: api_v3_paths.storage(storage.id),
-              title: storage.name
-            }
-          end
-        end
-
         link :categories do
           { href: api_v3_paths.categories_by_workspace(represented.id) }
         end
@@ -167,11 +155,6 @@ module API
           represented.ancestors_from_root.map do |ancestor|
             project_link(ancestor, name: :ancestor, getter: :id)
           end
-        end
-
-        link :projectStorages, uncacheable: true do
-          filters = [{ projectId: { operator: "=", values: [represented.id.to_s] } }]
-          { href: api_v3_paths.path_for(:project_storages, filters:) }
         end
 
         associated_project :parent
